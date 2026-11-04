@@ -1,0 +1,140 @@
+{
+  "at": "2026-11-04T04:25:12.706Z",
+  "results": [
+    {
+      "url": "https://www.joanwestenberg.com/feed",
+      "actualUrl": "https://www.joanwestenberg.com/feed",
+      "source": "rss",
+      "items": 20,
+      "warnings": [],
+      "samples": [
+        {
+          "title": "Rockets vs. Todo Lists",
+          "url": "https://www.joanwestenberg.com/p/rockets-vs-todo-lists",
+          "entryKey": "https://www.joanwestenberg.com/p/rockets-vs-todo-lists",
+          "publishedAt": "2026-11-03T23:55:42.000Z"
+        },
+        {
+          "title": "The One About my Agency",
+          "url": "https://www.joanwestenberg.com/p/the-one-about-my-agency",
+          "entryKey": "https://www.joanwestenberg.com/p/the-one-about-my-agency",
+          "publishedAt": "2026-11-01T22:34:02.000Z"
+        },
+        {
+          "title": "Why I’m Building a One-Person, Billion-Dollar Agency",
+          "url": "https://www.joanwestenberg.com/p/why-im-building-a-one-person-billion",
+          "entryKey": "https://www.joanwestenberg.com/p/why-im-building-a-one-person-billion",
+          "publishedAt": "2026-10-31T23:42:16.000Z"
+        }
+      ]
+    },
+    {
+      "url": "https://baoyu.io/feed.xml",
+      "actualUrl": "https://s.baoyu.io/feed.xml",
+      "source": "baoyu-official-blog",
+      "items": 38,
+      "warnings": [],
+      "samples": [
+        {
+          "title": "NotebookLM's Video Overview System Prompt: The Full Creation Workflow",
+          "url": "https://baoyu.io/blog/2026-10-20/notebooklm-video-overview-system-prompt",
+          "entryKey": "https://baoyu.io/blog/2026-10-20/notebooklm-video-overview-system-prompt",
+          "publishedAt": "2026-10-20T00:00:00.000Z"
+        },
+        {
+          "title": "我用 GPT 6 Astra 做了一个 3D 版的《桃花源记》（文中含提示词）",
+          "url": "https://baoyu.io/blog/gpt-6-astra-peach-blossom-land",
+          "entryKey": "https://baoyu.io/blog/gpt-6-astra-peach-blossom-land",
+          "publishedAt": "2026-09-19T00:00:00.000Z"
+        },
+        {
+          "title": "AI 原生思维——像训练大模型一样训练自己",
+          "url": "https://baoyu.io/blog/2026-08-31/ai-native-thinking",
+          "entryKey": "https://baoyu.io/blog/2026-08-31/ai-native-thinking",
+          "publishedAt": "2026-08-31T00:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "url": "https://rsshub.app/sspai/matrix",
+      "actualUrl": "https://sspai.com/api/v1/articles?offset=0&limit=20&is_matrix=1&sort=matrix_at&include_total=false",
+      "source": "sspai-matrix-api",
+      "items": 20,
+      "warnings": [],
+      "samples": [
+        {
+          "title": "我们购买的设备，真的属于我们吗？一份来自普通消费者的观察报告",
+          "url": "https://sspai.com/post/118271",
+          "entryKey": "https://sspai.com/post/118271",
+          "publishedAt": "2026-11-03T12:55:59.000Z"
+        },
+        {
+          "title": "谈谈触摸 Mac",
+          "url": "https://sspai.com/post/117917",
+          "entryKey": "https://sspai.com/post/117917",
+          "publishedAt": "2026-11-02T11:04:10.000Z"
+        },
+        {
+          "title": "PitRadio：Gran Turismo 7 的中文赛事工程师",
+          "url": "https://sspai.com/post/117560",
+          "entryKey": "https://sspai.com/post/117560",
+          "publishedAt": "2026-11-02T09:01:09.000Z"
+        }
+      ]
+    },
+    {
+      "url": "https://rsshub.app/readhub/daily",
+      "actualUrl": "https://api.readhub.cn/daily",
+      "source": "readhub-daily-api",
+      "items": 16,
+      "warnings": [],
+      "samples": [
+        {
+          "title": "彭博：币安 63 亿美元被盗事件或难获保险赔付，知情人士称其未投保网络安全险",
+          "url": "https://readhub.cn/topic/8xkd1CBigkk",
+          "entryKey": "readhub-8xkd1CBigkk",
+          "publishedAt": "2026-11-03T20:16:05.985Z"
+        },
+        {
+          "title": "瑞幸与王者荣耀 KPL 十周年联名遭部分网友质疑",
+          "url": "https://readhub.cn/topic/8xkU5VXd9lo",
+          "entryKey": "readhub-8xkU5VXd9lo",
+          "publishedAt": "2026-11-03T20:15:48.807Z"
+        },
+        {
+          "title": "国行「Apple 智能与 Siri」上线 部分机型升级 iOS 27.3 预览版可用",
+          "url": "https://readhub.cn/topic/8xlTAcK9A1V",
+          "entryKey": "readhub-8xlTAcK9A1V",
+          "publishedAt": "2026-11-03T19:35:22.491Z"
+        }
+      ]
+    },
+    {
+      "url": "https://rsshub.app/telegram/channel/bbczhongwen_rss",
+      "actualUrl": "https://t.me/s/bbczhongwen_rss",
+      "source": "telegram-public-preview",
+      "items": 20,
+      "warnings": [],
+      "samples": [
+        {
+          "title": "中共五中全會「空椅子」背後：常態化高壓反腐如何改變官場？",
+          "url": "https://www.bbc.com/zhongwen/articles/c3j47p5gwj5lo/trad?at_medium=RSS&at_campaign=rss",
+          "entryKey": "https://t.me/bbczhongwen_rss/24726",
+          "publishedAt": "2026-11-04T01:44:12.000Z"
+        },
+        {
+          "title": "如果黑客能夠控制超市的冷凍櫃，其他科技設備又有多脆弱？",
+          "url": "https://www.bbc.com/zhongwen/articles/cmkgk61rgzj4o/trad?at_medium=RSS&at_campaign=rss",
+          "entryKey": "https://t.me/bbczhongwen_rss/24724",
+          "publishedAt": "2026-11-04T01:44:11.000Z"
+        },
+        {
+          "title": "金與正發文 朝鮮否認策劃63億美元幣安黑客攻擊",
+          "url": "https://www.bbc.com/zhongwen/articles/ckwyqjd9w4x7o/trad?at_medium=RSS&at_campaign=rss",
+          "entryKey": "https://t.me/bbczhongwen_rss/24725",
+          "publishedAt": "2026-11-04T01:44:11.000Z"
+        }
+      ]
+    }
+  ]
+}

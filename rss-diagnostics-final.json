@@ -1,0 +1,45 @@
+{
+  "capturedAt": "2026-11-04T12:34:23.5828287+08:00",
+  "running": null,
+  "lastRun": {
+    "kind": "sync",
+    "ok": true,
+    "at": "2026-11-04T04:33:36.788Z",
+    "summary": {
+      "feeds": 114,
+      "inserted": 0,
+      "failures": 3,
+      "contentProcessed": 7,
+      "at": "2026-11-04T04:33:35.419Z",
+      "limited": false
+    }
+  },
+  "feeds": {
+    "enabled": 114,
+    "errors": [
+      {
+        "title": "Twitter @OpenAI",
+        "url": "https://x.com/OpenAI",
+        "error": "HTTP 404：订阅地址不存在或服务未提供该路由（最终地址：https://google.com/404）"
+      },
+      {
+        "title": "garymarcus.substack.com",
+        "url": "https://garymarcus.substack.com/",
+        "error": "HTTP 403：Cloudflare 人机验证，普通 RSS 请求无法通过"
+      },
+      {
+        "title": "gwern.net",
+        "url": "https://gwern.substack.com/",
+        "error": "HTTP 403：Cloudflare 人机验证，普通 RSS 请求无法通过"
+      }
+    ]
+  },
+  "schedule": {
+    "lastFetchAt": "2026-11-04T04:33:35.419Z",
+    "nextSyncAt": "2026-11-04T06:33:35.419Z",
+    "lastReportDate": "2026-11-03",
+    "nextReportAt": "2026-11-05 08:00",
+    "reportAt": "08:00",
+    "timeZone": "Asia/Shanghai"
+  }
+}

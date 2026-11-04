@@ -1,0 +1,170 @@
+---
+name: azure-image-gen
+description: "Generate or edit images for new-image, inpainting, and reference-image workflows. Use when the user needs a general image generation/editing skill, especially when Azure-backed output is acceptable or explicitly requested. Supports modern size strings, quality/background controls, and optional post-processing."
+---
+
+# Image Generation and Editing
+
+Use this skill as a general image generation and editing option for new-image creation, inpainting, and reference-image workflows. The bundled script defaults to Azure `gpt-image-2.5-flare`, with optional post-processing for blog-friendly outputs.
+
+## When to Use This Skill
+
+- User needs to **generate** a new image from a text prompt
+- User needs to **edit** an existing image, including mask-based inpainting
+- User wants to create a new image from one or more **reference images**
+- User explicitly asks for **Azure OpenAI**, **gpt-image-2.5-flare**, or another Azure-hosted GPT Image deployment
+- User already has an Azure OpenAI endpoint / deployment and wants to use the bundled script directly
+
+**Current backend**: the bundled script is Azure-specific. If the user needs another provider, another tool should be used instead.
+
+## Prerequisites
+
+For a complete endpoint URL like the one shown in Azure Foundry, set these variables in the shell or a `.env` file:
+
+| Variable | Example |
+|----------|---------|
+| `AZURE_IMAGE_ENDPOINT` | `https://<resource>/openai/deployments/gpt-image-2.5-flare/images/generations?api-version=preview` |
+| `AZURE_API_KEY` | Your Azure API key |
+
+The legacy `AZURE_OPENAI_ENDPOINT` plus `AZURE_OPENAI_API_KEY` configuration remains supported. It uses the resource root, constructs the Azure OpenAI v1 generation URL, and sends the `api-key` header. `AZURE_IMAGE_ENDPOINT` plus `AZURE_API_KEY` uses the complete endpoint and Bearer authentication shown by Azure Foundry.
+
+Python dependencies: `requests`, `Pillow` (for optional post-processing).
+
+```bash
+pip install requests Pillow
+```
+
+## Quick Start
+
+### Basic generation
+```bash
+python .agents/skills/azure-image-gen/scripts/azure_generate_image.py "A photograph of a red fox in an autumn forest"
+```
+
+### Edit an existing image
+```bash
+python .agents/skills/azure-image-gen/scripts/azure_generate_image.py \
+  "Replace the empty sign with a neon cafe logo" \
+  --input-image storefront.png \
+  --mask sign-mask.png \
+  --skip-post-process
+```
+
+### Use multiple reference images
+```bash
+python .agents/skills/azure-image-gen/scripts/azure_generate_image.py \
+  "Create a premium gift basket using these references" \
+  --input-image soap.png \
+  --input-image candle.png \
+  --input-image towel.png \
+  --size 2048x1152 \
+  --quality auto \
+  --skip-post-process
+```
+
+## Procedure
+
+1. **Verify credentials**: Confirm either `AZURE_IMAGE_ENDPOINT` and `AZURE_API_KEY`, or the legacy `AZURE_OPENAI_ENDPOINT` and `AZURE_OPENAI_API_KEY`, are set (env vars or `.env`). If missing, ask the user to configure them locally; never ask them to paste a key into chat.
+2. **Choose the API path**:
+   - No `--input-image` flags: generation flow (`/images/generations`)
+   - One or more `--input-image` flags: edit/reference-image flow (`/images/edits`)
+   - Optional `--mask`: inpainting on the first input image
+3. **Build the command**:
+   ```bash
+   python .agents/skills/azure-image-gen/scripts/azure_generate_image.py "<prompt>" [options]
+   ```
+4. **Run the script** and note the printed final file path.
+5. **Preserve or move the output** as needed. Use `--skip-post-process` when the user wants the raw API output instead of the default post-processing flow.
+
+## CLI Reference
+
+```text
+python azure_generate_image.py <prompt> [options]
+```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--input-image`, `-i` | none | Input image path. Repeat to provide multiple reference images; switches to the edits endpoint |
+| `--mask` | none | Optional inpainting mask. Requires at least one `--input-image` |
+| `--output`, `-o` | `generated_image.png` | Output file path. The raw file extension is adjusted to match the API format when needed |
+| `--size`, `-s` | `1024x1024` | `auto` or any `WIDTHxHEIGHT` string, such as `1536x1024` or `2048x1152` |
+| `--quality`, `-q` | `medium` | `low`, `medium`, `high`, `auto` |
+| `--format`, `-f` | `png` | Raw API output format: `png`, `jpeg`（Azure Images API 不支持 webp，传入会报 400） |
+| `--compression` | `100` | 0-100 output compression |
+| `--background` | none | Optional background mode: `auto`, `opaque`, `transparent` |
+| `--skip-post-process` | off | Keep the raw API output instead of resizing/compressing it |
+| `--n` | `1` | Number of images to request. The script currently saves the first image only |
+| `--deployment`, `-d` | `gpt-image-2.5-flare` | Azure deployment name |
+| `--api-version` | `preview` | Azure API version when constructing a deployment URL |
+| `--endpoint` | from env | Override the configured endpoint |
+| `--api-key` | from env | Override the configured API key; command-line overrides use the legacy `api-key` header |
+
+## Usage Examples
+
+### Larger generation with newer size support
+```bash
+python .agents/skills/azure-image-gen/scripts/azure_generate_image.py "Wide cinematic skyline" --size 2048x1152 --quality auto
+```
+
+### Keep raw JPEG output
+```bash
+python .agents/skills/azure-image-gen/scripts/azure_generate_image.py "Minimal product hero" --format jpeg --compression 70 --skip-post-process
+```
+
+### Inpaint an uploaded image
+```bash
+python .agents/skills/azure-image-gen/scripts/azure_generate_image.py "Replace the pool float with a flamingo" --input-image lounge.png --mask mask.png --skip-post-process
+```
+
+### Multi-image reference workflow
+```bash
+python .agents/skills/azure-image-gen/scripts/azure_generate_image.py "Compose a magazine-worthy flat lay from these references" --input-image watch.png --input-image wallet.png --input-image pen.png --quality high --skip-post-process
+```
+
+## Post-Processing
+
+By default, the script keeps the repository's existing post-processing flow:
+
+1. **Resizes** to a maximum width of **500 px**
+2. **Compresses** toward ~200 KB
+3. May rewrite the raw API file into a blog-friendly final `.jpg`
+
+Use `--skip-post-process` when the user wants:
+
+- the raw API output format preserved (`png` or `jpeg`)
+- higher-resolution results from `gpt-image-2.5-flare`
+- edit/reference-image outputs without automatic cover optimization
+
+## Azure-Specific Notes
+
+- This skill stays on Azure's Images API rather than the OpenAI Responses API.
+- `gpt-image-2.5-flare` is the fast general-purpose default. Keep `--deployment` configurable because Azure deployment names are resource-specific.
+- Repeating `--input-image` sends multiple image parts to Azure's edits endpoint for reference-image workflows.
+- If a mask is supplied with multiple input images, treat the **first** input image as the masked base image.
+
+## Prompt Guidelines
+
+- Be explicit about the desired style, framing, lighting, and composition.
+- For edits, say both **what to preserve** and **what to change**.
+- For masked edits, describe the intended replacement rather than only describing the mask geometry.
+- Avoid adding prompt or metadata text into the image unless the user explicitly wants visible text rendered.
+
+## Error Handling
+
+- **Missing credentials**: Script prints clear instructions for the supported endpoint/key pairs.
+- **Missing input files**: CLI validation fails before any network call.
+- **API errors**: HTTP status code and response body are surfaced clearly.
+- **Missing Pillow**: Warning printed; post-processing skipped and the raw API output is kept.
+- **Windows emoji encoding**: If the script crashes with `UnicodeEncodeError` on emoji characters (common on Windows terminals using cp1252), set `PYTHONIOENCODING=utf-8` before running, or upgrade to a script version that auto-reconfigures stdout to UTF-8.
+
+## No-Vision Workflow (when generated images cannot be visually inspected)
+
+When the agent or calling environment cannot view images for verification (e.g., no vision-capable model available), use this fallback flow instead of the full sketch → inspect → refine cycle:
+
+1. **Generate one draft** with the sketch prompt at lower quality/resolution.
+2. **Immediately generate one final** using a refinement prompt that polishes rather than redesigns: focus on `Refine: sharper details, cleaner composition, preserve the same metaphor and information blocks` — do not introduce new structural changes.
+3. **Accept the final** as the cover; skip visual inspection.
+4. **Report instead of asking**: do not block on user confirmation. In the final report, state the cover path and the summary angle it encodes, and note that visual acceptance was skipped (the user can request a regeneration if the cover is not satisfactory).
+5. If the article has reusable local reference images (e.g., saved step screenshots), attach 1–2 as `--input-image` to help the model stay on topic.
+
+This avoids the dead-end of trying to visually evaluate an image the agent cannot see, while keeping the user informed via the final report instead of blocking the flow with a confirmation round-trip.
