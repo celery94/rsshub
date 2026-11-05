@@ -1,0 +1,46 @@
+"""Strict editorial manifest contract shared by offline rendering and private publishing."""
+import re
+
+LAYOUTS = ('comparison', 'insight', 'steps')
+
+
+def plain(value, minimum, maximum, *, chinese=False):
+    if not isinstance(value, str) or value != value.strip() or not minimum <= len(value) <= maximum or re.search(r'[\x00-\x1f\x7f<>`]|\*\*|!\[|\]\(', value):
+        raise ValueError(f'Editorial text requires {minimum}–{maximum} plain-text codepoints.')
+    if chinese and not re.search(r'[\u3400-\u9fff\U00020000-\U000323af]', value):
+        raise ValueError('Editorial section text must contain Chinese.')
+
+
+def exact_object(value, required, optional=()):
+    if not isinstance(value, dict) or not set(required).issubset(value) or set(value) - set(required) - set(optional):
+        raise ValueError('Editorial objects contain missing or unknown fields.')
+
+
+def validate_editorial(editorial, *, required=False, present=False):
+    if not required and not present:
+        return None
+    exact_object(editorial, ('layout', 'sections'), ('comparison',))
+    layout = editorial['layout']
+    if layout not in LAYOUTS:
+        raise ValueError('Editorial layout must be comparison, insight or steps.')
+    sections = editorial['sections']
+    if not isinstance(sections, list) or not 2 <= len(sections) <= 3:
+        raise ValueError('Editorial requires two or three sections.')
+    for section in sections:
+        exact_object(section, ('heading', 'body'))
+        plain(section['heading'], 1, 12, chinese=True)
+        plain(section['body'], 12, 50, chinese=True)
+    if layout == 'comparison':
+        comparison = editorial.get('comparison')
+        exact_object(comparison, ('label', 'left', 'right'))
+        plain(comparison['label'], 1, 24)
+        for side in ('left', 'right'):
+            metric = comparison[side]
+            exact_object(metric, ('name', 'value', 'unit'))
+            for key, maximum in (('name', 12), ('value', 16), ('unit', 12)):
+                plain(metric[key], 1, maximum)
+        if comparison['left']['unit'] != comparison['right']['unit']:
+            raise ValueError('Comparison units must match exactly.')
+    elif 'comparison' in editorial:
+        raise ValueError('Only the comparison layout accepts comparison metrics.')
+    return editorial

@@ -33,4 +33,4 @@ __pycache__/
 *.pyc
 
 # Local RSS article tasks (inputs, generated images, WeChat results)
-output/rss-articles/
+output

@@ -14,7 +14,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(HERE, "../../../..");
 const STAGES = ["evidence", "writing", "images", "validation"];
 const SAFE_FAILURES = new Set(["WECHAT_PREPARATION_FAILED", "WECHAT_CONFIG_MISSING", "WECHAT_DEPENDENCY_MISSING", "WECHAT_API_REJECTED"]);
-const FIELDS = ["version", "mode", "task_id", "source_url", "article_id", "title", "feed_title", "published_at", "cached_content", "instructions"];
+const FIELDS = ["version", "mode", "task_id", "source_url", "article_id", "title", "feed_title", "published_at", "cached_content", "instructions", "poster_layout"];
 export class TaskError extends Error {
   constructor(code, message) { super(message); this.code = code; }
 }
@@ -29,6 +29,7 @@ export function normalizeInput(input) {
   if (!input || typeof input !== "object" || Array.isArray(input)) reject("INVALID_INPUT", "Input must be a JSON object.");
   if (Object.keys(input).some(key => !FIELDS.includes(key))) reject("UNKNOWN_FIELD", "Unknown input fields are not accepted.");
   if (input.version !== 1 || !["rss-article", "rss-share"].includes(input.mode)) reject("INVALID_INPUT", "Expected version 1 and mode rss-article or rss-share.");
+  if (Object.hasOwn(input, "poster_layout") && (input.mode !== "rss-share" || !["content", "editorial"].includes(input.poster_layout))) reject("INVALID_INPUT", "poster_layout is only supported as content or editorial in rss-share mode.");
   taskId(input.task_id);
   if (typeof input.source_url !== "string" || !/^https?:\/\//i.test(input.source_url)) reject("INVALID_SOURCE_URL", "source_url must be an absolute HTTP(S) URL.");
   let url;

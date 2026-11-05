@@ -111,8 +111,21 @@ def validate_share(task_dir, result, title, source, workspace):
             fail("INVALID_SHARE", "Share symbolic links and junctions are forbidden.")
     manifest = read_json(contained(task_dir / "share.json", task_dir))
     fields = {"title", "caption", "source", "headline", "subtitle", "poster"}
-    if not isinstance(manifest, dict) or set(manifest) != fields or any(not isinstance(manifest[key], str) or not manifest[key].strip() for key in fields):
+    if not isinstance(manifest, dict) or set(manifest) - (fields | {"key_points", "editorial"}) or not fields.issubset(manifest) or any(not isinstance(manifest[key], str) or not manifest[key].strip() for key in fields):
         fail("INVALID_SHARE", "Incomplete share manifest.")
+    input_data = read_json(contained(task_dir / "input.json", task_dir))
+    if "poster_layout" in input_data and input_data["poster_layout"] not in ("content", "editorial"):
+        fail("INVALID_SHARE", "poster_layout must be content or editorial when provided.")
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from share_editorial import validate_editorial
+    validate_editorial(manifest.get("editorial"), required=input_data.get("poster_layout") == "editorial", present="editorial" in manifest)
+    points = manifest.get("key_points")
+    if "key_points" in manifest or input_data.get("poster_layout") == "content":
+        if not isinstance(points, list) or not 2 <= len(points) <= 3:
+            fail("INVALID_SHARE", "Content posters require two or three key_points.")
+        for point in points:
+            if not isinstance(point, str) or point != point.strip() or not 12 <= len(point) <= 50 or not re.search(r"[\u3400-\u9fff\U00020000-\U000323af]", point) or re.search(r"[\x00-\x1f\x7f<>`]|\*\*|!\[|\]\(", point):
+                fail("INVALID_SHARE", "key_points must be Chinese plain text of 12–50 codepoints.")
     for key, maximum in (("title", 32), ("headline", 24), ("subtitle", 40)):
         if len(manifest[key]) > maximum or re.search(r"[\r\n<>]", manifest[key]):
             fail("INVALID_SHARE", "Share text exceeds its plain-text constraints.")
@@ -152,6 +165,8 @@ def run_bridge(task_dir, lock_token, title, digest, source, *, workspace=ROOT, m
     if not lock_token or lock.get("token") != lock_token:
         fail("TASK_LOCK_REQUIRED", "The RSS helper must hold this task's lock.")
     input_data = read_json(contained(task_dir / "input.json", task_dir))
+    if "poster_layout" in input_data and (mode != "rss-share" or input_data["poster_layout"] not in ("content", "editorial")):
+        fail("INVALID_STATE", "poster_layout is only supported as content or editorial in rss-share mode.")
     result_path = contained(task_dir / "result.json", task_dir)
     result = read_json(result_path)
     article = contained(task_dir / ("caption.txt" if mode == "rss-share" else "article.md"), task_dir)

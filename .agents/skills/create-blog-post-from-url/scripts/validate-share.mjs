@@ -4,6 +4,31 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
+export function validateKeyPoints(points, required = false, present = points !== undefined) {
+  if (!required && !present) return;
+  if (!Array.isArray(points) || points.length < 2 || points.length > 3) throw new Error('Content posters require two or three key_points.');
+  for (const point of points) {
+    if (typeof point !== 'string' || point !== point.trim() || [...point].length < 12 || [...point].length > 50 || !/\p{Script=Han}/u.test(point) || /[\x00-\x1f\x7f<>`]|\*\*|!\[|\]\(/.test(point)) throw new Error('key_points must be Chinese plain text of 12–50 codepoints.');
+  }
+}
+function editorialObject(value, required, optional=[]) {
+  if (!value || typeof value !== 'object' || Array.isArray(value) || required.some(key=>!Object.hasOwn(value,key)) || Object.keys(value).some(key=>![...required,...optional].includes(key))) throw new Error('Editorial objects contain missing or unknown fields.');
+}
+function editorialText(value,min,max,chinese=false) {
+  if (typeof value !== 'string' || value !== value.trim() || [...value].length < min || [...value].length > max || /[\x00-\x1f\x7f<>`]|\*\*|!\[|\]\(/.test(value) || (chinese && !/\p{Script=Han}/u.test(value))) throw new Error(`Editorial text requires ${min}–${max} plain-text codepoints${chinese?' containing Chinese':''}.`);
+}
+export function validateEditorial(value,required=false,present=value!==undefined) {
+  if(!required && !present) return;
+  editorialObject(value,['layout','sections'],['comparison']);
+  if(!['comparison','insight','steps'].includes(value.layout)) throw new Error('Editorial layout must be comparison, insight or steps.');
+  if(!Array.isArray(value.sections) || value.sections.length<2 || value.sections.length>3) throw new Error('Editorial requires two or three sections.');
+  for(const section of value.sections){editorialObject(section,['heading','body']);editorialText(section.heading,1,12,true);editorialText(section.body,12,50,true);}
+  if(value.layout==='comparison'){
+    const pair=value.comparison;editorialObject(pair,['label','left','right']);editorialText(pair.label,1,24);
+    for(const side of ['left','right']){editorialObject(pair[side],['name','value','unit']);for(const [key,max] of [['name',12],['value',16],['unit',12]])editorialText(pair[side][key],1,max);}
+    if(pair.left.unit!==pair.right.unit)throw new Error('Comparison units must match exactly.');
+  }else if(Object.hasOwn(value,'comparison'))throw new Error('Only the comparison layout accepts comparison metrics.');
+}
 export function readShare(taskDir, {source} = {}) {
   const dir = path.resolve(taskDir);
   const check = file => {
@@ -24,7 +49,10 @@ export function readShare(taskDir, {source} = {}) {
   const manifest = JSON.parse(fs.readFileSync(check(path.join(dir, 'share.json')), 'utf8').replace(/^\uFEFF/, ''));
   if (!manifest || Array.isArray(manifest) || typeof manifest !== 'object') throw new Error('share.json must be an object.');
   const fields = ['title','caption','source','headline','subtitle','poster'];
-  if (Object.keys(manifest).some(key => !fields.includes(key)) || fields.some(key => typeof manifest[key] !== 'string' || !manifest[key].trim())) throw new Error('share.json requires only title, caption, source, headline, subtitle and poster strings.');
+  if (Object.keys(manifest).some(key => ![...fields,'key_points','editorial'].includes(key)) || fields.some(key => typeof manifest[key] !== 'string' || !manifest[key].trim())) throw new Error('share.json requires title, caption, source, headline, subtitle and poster strings; key_points and editorial are the optional fields.');
+  if (Object.hasOwn(input,'poster_layout') && !['content','editorial'].includes(input.poster_layout)) throw new Error('poster_layout must be content or editorial when provided.');
+  validateKeyPoints(manifest.key_points, input.poster_layout === 'content', Object.hasOwn(manifest,'key_points'));
+  validateEditorial(manifest.editorial, input.poster_layout === 'editorial', Object.hasOwn(manifest,'editorial'));
   for (const [key, limit] of [['title',32],['headline',24],['subtitle',40]]) {
     if ([...manifest[key]].length > limit || /[\r\n<>]/.test(manifest[key])) throw new Error(`${key} exceeds its length or plain-text constraint.`);
   }
