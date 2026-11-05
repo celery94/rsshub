@@ -1,6 +1,6 @@
 ---
 name: create-blog-post-from-url
-description: 从公开 URL 或 RSS 单篇任务生成可信、自然、可执行的中文文章、Markdown 和配图，并保存到微信公众号草稿箱。用户要求把链接或 RSS 文章改写成中文文章、生成封面配图、推送微信草稿时使用。RSS 模式默认一张 HD-2D 封面和至少一张正文图，保存独立任务结果，不提交推送 Git；博客模式保留原有目录和交付流程。
+description: 从公开 URL 或 RSS 单篇任务生成可信、自然、可执行的中文文章、Markdown 和配图，并保存到微信公众号草稿箱。用户要求把链接或 RSS 文章改写成中文文章、生成封面配图、推送微信草稿时使用。RSS 长文模式生成封面和正文图；rss-share 模式生成单张 HD-2D 分享海报、中文文案和公众号图片消息。两类 RSS 任务独立保存、不提交推送 Git。
 ---
 
 # 从 URL 创建博客
@@ -10,7 +10,8 @@ description: 从公开 URL 或 RSS 单篇任务生成可信、自然、可执行
 ## 调用模式
 
 - `blog`：未指定 RSS 模式时沿用现有博客流程、文章编号与资源目录。
-- `rss-article`：用户要求处理 RSS 单篇、从 RSS 文章按钮调用，或输入含 `mode: rss-article` 时，先读取 [rss-article-workflow.md](references/rss-article-workflow.md)。使用独立任务目录，默认创建中文文章、一张 HD-2D 封面和一张正文配图，再保存到微信公众号草稿箱；本模式不提交、不推送 Git。任务字段、阶段、结果与恢复规则以该参考为准，不能套用博客目录或博客 Git 步骤。
+- `rss-share`：用户要求把当前 RSS 文章做成单张 HD-2D 分享海报和公众号图片消息，或输入含 `mode: rss-share` 时，先读取 [rss-share-workflow.md](references/rss-share-workflow.md)。只生成一张竖版海报与分享文案，保存为 `newspic` 草稿；该参考替代下文的长文、封面加正文图、博客和 Git 流程。
+- `rss-article`：用户要求处理 RSS 单篇长篇图文、从原有文章按钮调用，或输入含 `mode: rss-article` 时，先读取 [rss-article-workflow.md](references/rss-article-workflow.md)。使用独立任务目录，默认创建中文文章、一张 HD-2D 封面和一张正文配图，再保存到微信公众号草稿箱；本模式不提交、不推送 Git。任务字段、阶段、结果与恢复规则以该参考为准，不能套用博客目录或博客 Git 步骤。
 
 技能由 Agent 加载后执行。RSS 页面按钮需要另行接入 Agent 任务；仅修改本技能不会自动添加按钮，也不会改变后台 RSS 日报。
 

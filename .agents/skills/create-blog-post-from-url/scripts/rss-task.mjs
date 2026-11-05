@@ -28,13 +28,13 @@ function taskId(id) {
 export function normalizeInput(input) {
   if (!input || typeof input !== "object" || Array.isArray(input)) reject("INVALID_INPUT", "Input must be a JSON object.");
   if (Object.keys(input).some(key => !FIELDS.includes(key))) reject("UNKNOWN_FIELD", "Unknown input fields are not accepted.");
-  if (input.version !== 1 || input.mode !== "rss-article") reject("INVALID_INPUT", "Expected version 1 and mode rss-article.");
+  if (input.version !== 1 || !["rss-article", "rss-share"].includes(input.mode)) reject("INVALID_INPUT", "Expected version 1 and mode rss-article or rss-share.");
   taskId(input.task_id);
   if (typeof input.source_url !== "string" || !/^https?:\/\//i.test(input.source_url)) reject("INVALID_SOURCE_URL", "source_url must be an absolute HTTP(S) URL.");
   let url;
   try { url = new URL(input.source_url); } catch { reject("INVALID_SOURCE_URL", "source_url must be an absolute HTTP(S) URL."); }
   if (!["http:", "https:"].includes(url.protocol) || !url.hostname || url.username || url.password) reject("INVALID_SOURCE_URL", "source_url must be an HTTP(S) URL without credentials.");
-  const normalized = { version: 1, mode: "rss-article", task_id: input.task_id, source_url: url.href };
+  const normalized = { version: 1, mode: input.mode, task_id: input.task_id, source_url: url.href };
   for (const key of FIELDS.slice(4)) {
     if (Object.hasOwn(input, key)) {
       if (typeof input[key] !== "string") reject("INVALID_INPUT", "Optional input fields must be strings.");
@@ -118,7 +118,8 @@ export function configurationReport(root, environment = process.env) {
 }
 
 /** Injection points are module APIs for offline tests, never CLI switches. */
-export function createTaskRunner({ workspace = PROJECT_ROOT, environment = process.env, validator, runBridge } = {}) {
+export function createTaskRunner({ workspace = PROJECT_ROOT, environment = process.env, mode = "rss-article", validator, runBridge } = {}) {
+  if (!["rss-article", "rss-share"].includes(mode)) reject("INVALID_MODE", "Expected rss-article or rss-share mode.");
   const root = fs.realpathSync(workspace);
   const relative = file => path.relative(root, file).split(path.sep).join("/");
   function safe(file, boundary = root) {
@@ -154,11 +155,11 @@ export function createTaskRunner({ workspace = PROJECT_ROOT, environment = proce
   }
   function taskPaths(id, create = false) {
     taskId(id);
-    const dir = path.join(root, "output", "rss-articles", id);
+    const dir = path.join(root, "output", mode === "rss-share" ? "rss-shares" : "rss-articles", id);
     safe(dir);
     if (create) directory(dir);
     const get = name => safe(path.join(dir, name), dir);
-    return { dir, input: get("input.json"), result: get("result.json"), article: get("article.md"), assets: get("assets"), notes: get("source-notes.md"), lock: get(".lock") };
+    return { dir, input: get("input.json"), result: get("result.json"), article: get(mode === "rss-share" ? "caption.txt" : "article.md"), share: get("share.json"), assets: get("assets"), notes: get("source-notes.md"), lock: get(".lock") };
   }
   function atomic(file, value) {
     safe(file);
@@ -197,8 +198,12 @@ export function createTaskRunner({ workspace = PROJECT_ROOT, environment = proce
   function load(files) {
     const input = normalizeInput(readJson(files.input));
     const result = readJson(files.result);
-    if (input.task_id !== path.basename(files.dir) || result.version !== 1 || result.mode !== "rss-article" || result.task_id !== input.task_id || result.source_url !== input.source_url || result.article_path !== relative(files.article) || !["running", "succeeded", "failed", "needs_attention"].includes(result.status) || ![...STAGES, "wechat_draft"].includes(result.stage) || (result.status === "succeeded" && (typeof result.media_id !== "string" || !result.media_id.trim()))) {
+    if (input.task_id !== path.basename(files.dir) || result.version !== 1 || result.mode !== mode || input.mode !== mode || result.task_id !== input.task_id || result.source_url !== input.source_url || result.article_path !== relative(files.article) || !["running", "succeeded", "failed", "needs_attention"].includes(result.status) || ![...STAGES, "wechat_draft"].includes(result.stage) || (result.status === "succeeded" && (typeof result.media_id !== "string" || !result.media_id.trim()))) {
       reject("INVALID_STATE", "Stored task state does not match its input or fixed paths.");
+    }
+    if (mode === "rss-share") {
+      const posters = ["png", "jpg"].map(ext => relative(path.join(files.assets, `01-poster.${ext}`)));
+      if (result.article_type !== "newspic" || result.image_count !== 1 || result.caption_path !== relative(files.article) || !Array.isArray(result.inline_image_paths) || result.inline_image_paths.length || result.poster_path !== result.cover_path || (result.poster_path !== null && !posters.includes(result.poster_path))) reject("INVALID_STATE", "Stored share result does not match fixed single-poster paths.");
     }
     return { input, result };
   }
@@ -227,6 +232,11 @@ export function createTaskRunner({ workspace = PROJECT_ROOT, environment = proce
   }
   async function inspectArticle(files, input) {
     safe(files.article, files.dir);
+    if (mode === "rss-share") {
+      const api = validator || await import("./validate-share.mjs");
+      try { return api.readShare(files.dir, {source:input.source_url}); }
+      catch { reject("VALIDATION_FAILED", "Share validation failed; run validate-share.mjs for details."); }
+    }
     let api = validator;
     if (!api) api = await import("./validate-article.mjs");
     if (typeof api.validateArticle !== "function" || typeof api.parseFrontmatter !== "function") reject("VALIDATOR_UNAVAILABLE", "The validator must export validateArticle and parseFrontmatter with RSS mode support.");
@@ -251,9 +261,10 @@ export function createTaskRunner({ workspace = PROJECT_ROOT, environment = proce
     return { title: values.title, digest: values.description, source: values.source, cover, inline };
   }
   const runner = {
-    preflight: () => configurationReport(root, environment),
+    preflight: () => ({...configurationReport(root, environment), mode}),
     init: inputFile => {
       const input = normalizeInput(readJson(path.resolve(root, inputFile)));
+      if (input.mode !== mode) reject("INVALID_MODE", "Input mode must match the selected runner mode.");
       return locked(input.task_id, true, async files => {
       if (fs.existsSync(files.input)) {
         const existing = normalizeInput(readJson(files.input));
@@ -264,7 +275,8 @@ export function createTaskRunner({ workspace = PROJECT_ROOT, environment = proce
       if (fs.readdirSync(files.dir).some(name => name !== ".lock")) reject("TASK_ARTIFACTS_EXIST", "Task artifacts exist without input.json; refusing to overwrite them.");
       directory(files.assets);
       const timestamp = new Date().toISOString();
-      const result = { version: 1, mode: "rss-article", task_id: input.task_id, source_url: input.source_url, status: "running", stage: "evidence", title: input.title ?? null, article_path: relative(files.article), cover_path: null, inline_image_paths: [], media_id: null, error: null, created_at: timestamp, updated_at: timestamp };
+      const result = { version: 1, mode: input.mode, task_id: input.task_id, source_url: input.source_url, status: "running", stage: "evidence", title: input.title ?? null, article_path: relative(files.article), cover_path: null, inline_image_paths: [], media_id: null, error: null, created_at: timestamp, updated_at: timestamp };
+      if (mode === "rss-share") Object.assign(result, {article_type:"newspic",image_count:1,caption_path:relative(files.article),poster_path:null});
       atomic(files.input, input);
       atomic(files.result, result);
       // This is an evidence placeholder, not an instruction derived from cached data.
@@ -293,7 +305,7 @@ export function createTaskRunner({ workspace = PROJECT_ROOT, environment = proce
       catch (error) {
         return save(files, result, { status: "failed", error: { code: error instanceof TaskError ? error.code : "VALIDATION_FAILED", message: error instanceof TaskError ? error.message : "Article validation could not complete." } });
       }
-      result = save(files, result, { status: "running", stage: "wechat_draft", title: metadata.title, cover_path: relative(metadata.cover), inline_image_paths: metadata.inline.map(relative), media_id: null, error: null });
+      result = save(files, result, { status: "running", stage: "wechat_draft", title: metadata.title, cover_path: relative(metadata.cover), inline_image_paths: metadata.inline.map(relative), ...(mode === "rss-share" ? {article_type:"newspic",image_count:1,caption_path:relative(files.article),poster_path:relative(metadata.cover)} : {}), media_id: null, error: null });
       const request = { python, taskDir: files.dir, lockToken, ...metadata };
       let completion;
       try {
@@ -315,14 +327,16 @@ export function createTaskRunner({ workspace = PROJECT_ROOT, environment = proce
 
 export async function main(argv = process.argv.slice(2)) {
   if (fs.realpathSync(process.cwd()) !== fs.realpathSync(PROJECT_ROOT)) reject("WORKSPACE_REQUIRED", "Run rss-task.mjs from the project root.");
-  const runner = createTaskRunner();
+  let mode = "rss-article";
+  if (argv[0] === "--mode") { mode = argv[1]; argv = argv.slice(2); }
+  const runner = createTaskRunner({mode});
   const [command, ...args] = argv;
   if (command === "preflight" && !args.length) return runner.preflight();
   if (command === "init" && args.length === 1) return runner.init(args[0]);
   if (command === "stage" && args.length === 2) return runner.stage(...args);
   if (command === "fail" && args.length === 3) return runner.fail(...args);
   if (command === "publish" && args.length === 3 && args[1] === "--python") return runner.publish(args[0], args[2]);
-  reject("INVALID_ARGUMENTS", "Usage: rss-task.mjs init <input.json> | preflight | stage <task_id> <stage> | fail <task_id> <code> <message> | publish <task_id> --python <python-exe>");
+  reject("INVALID_ARGUMENTS", "Usage: rss-task.mjs [--mode rss-article|rss-share] init <input.json> | preflight | stage <task_id> <stage> | fail <task_id> <code> <message> | publish <task_id> --python <python-exe>");
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {

@@ -17,6 +17,7 @@ import re
 import sys
 from types import SimpleNamespace
 from uuid import uuid4
+from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[4]
 PUBLISHER = ROOT / ".agents/skills/wechat-draft/scripts/publish_draft.py"
@@ -94,6 +95,49 @@ def load_publisher():
     return module
 
 
+def validate_share(task_dir, result, title, source, workspace):
+    """Validate fixed share paths and decode every pixel before any API call."""
+    from PIL import Image
+    parsed_source = urlsplit(source)
+    if parsed_source.scheme not in ("http", "https") or not parsed_source.hostname or parsed_source.username or parsed_source.password:
+        fail("INVALID_SHARE", "Invalid source URL.")
+    ancestors = []
+    current = task_dir
+    while current != workspace:
+        ancestors.append(current)
+        current = current.parent
+    for item in (*ancestors, *task_dir.rglob("*")):
+        if item.is_symlink() or (hasattr(item, "is_junction") and item.is_junction()):
+            fail("INVALID_SHARE", "Share symbolic links and junctions are forbidden.")
+    manifest = read_json(contained(task_dir / "share.json", task_dir))
+    fields = {"title", "caption", "source", "headline", "subtitle", "poster"}
+    if not isinstance(manifest, dict) or set(manifest) != fields or any(not isinstance(manifest[key], str) or not manifest[key].strip() for key in fields):
+        fail("INVALID_SHARE", "Incomplete share manifest.")
+    for key, maximum in (("title", 32), ("headline", 24), ("subtitle", 40)):
+        if len(manifest[key]) > maximum or re.search(r"[\r\n<>]", manifest[key]):
+            fail("INVALID_SHARE", "Share text exceeds its plain-text constraints.")
+    caption = contained(task_dir / "caption.txt", task_dir).read_text(encoding="utf-8-sig").strip()
+    suffix = "来源：" + source
+    body = caption[:-len(suffix)].strip() if caption.endswith("\n" + suffix) else ""
+    if manifest["title"] != title or manifest["source"] != source or manifest["caption"].strip() != caption or not 100 <= len(re.sub(r"\s", "", body)) <= 200 or not re.search(r"[\u3400-\u9fff]", body) or re.search(r"<[^>]*>|!\[[^\]]*\]\(", caption):
+        fail("INVALID_SHARE", "Share caption or source does not match its validated input.")
+    if manifest["poster"] not in ("./assets/01-poster.png", "./assets/01-poster.jpg"):
+        fail("INVALID_SHARE", "Invalid poster path.")
+    poster = contained(task_dir / manifest["poster"], task_dir / "assets")
+    expected = poster.relative_to(workspace).as_posix()
+    if result.get("poster_path") != expected or result.get("cover_path") != expected or result.get("caption_path") != (task_dir / "caption.txt").relative_to(workspace).as_posix() or result.get("inline_image_paths") != [] or result.get("article_type") != "newspic" or result.get("image_count") != 1:
+        fail("INVALID_SHARE", "Share result paths do not match fixed artifacts.")
+    if list((task_dir / "assets").iterdir()) != [poster]:
+        fail("INVALID_SHARE", "Exactly one final poster is required.")
+    with Image.open(poster) as image:
+        expected_format = "PNG" if poster.suffix == ".png" else "JPEG"
+        if image.format != expected_format or image.width < 1080 or image.height < 1440 or image.width * 4 != image.height * 3 or getattr(image, "n_frames", 1) != 1:
+            fail("INVALID_SHARE", "Poster must be a single-frame 3:4 PNG/JPG of at least 1080×1440.")
+        image.verify()
+    with Image.open(poster) as image:
+        image.load()
+
+
 def run_bridge(task_dir, lock_token, title, digest, source, *, workspace=ROOT, module_loader=load_publisher):
     """Module injection is for offline unittest only, never a CLI option."""
     workspace = Path(workspace).resolve()
@@ -101,7 +145,8 @@ def run_bridge(task_dir, lock_token, title, digest, source, *, workspace=ROOT, m
     task_id = task_dir.name
     if not re.fullmatch(r"[A-Za-z0-9_-]{1,80}", task_id) or re.fullmatch(r"CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9]", task_id, re.I):
         fail("INVALID_STATE", "Invalid task identifier.")
-    if task_dir != workspace / "output/rss-articles" / task_id:
+    mode = "rss-share" if task_dir.parent.name == "rss-shares" else "rss-article"
+    if task_dir != workspace / "output" / ("rss-shares" if mode == "rss-share" else "rss-articles") / task_id:
         fail("PATH_ESCAPE", "The bridge only accepts fixed RSS task directories.")
     lock = read_json(contained(task_dir / ".lock", task_dir))
     if not lock_token or lock.get("token") != lock_token:
@@ -109,10 +154,10 @@ def run_bridge(task_dir, lock_token, title, digest, source, *, workspace=ROOT, m
     input_data = read_json(contained(task_dir / "input.json", task_dir))
     result_path = contained(task_dir / "result.json", task_dir)
     result = read_json(result_path)
-    article = contained(task_dir / "article.md", task_dir)
+    article = contained(task_dir / ("caption.txt" if mode == "rss-share" else "article.md"), task_dir)
     expected_article = article.relative_to(workspace).as_posix()
     for data in (input_data, result):
-        if data.get("version") != 1 or data.get("mode") != "rss-article" or data.get("task_id") != task_id or data.get("source_url") != source:
+        if data.get("version") != 1 or data.get("mode") != mode or data.get("task_id") != task_id or data.get("source_url") != source:
             fail("INVALID_STATE", "Bridge arguments do not match stored task input.")
     if result.get("status") == "succeeded" and isinstance(result.get("media_id"), str) and result["media_id"].strip():
         return result
@@ -124,7 +169,7 @@ def run_bridge(task_dir, lock_token, title, digest, source, *, workspace=ROOT, m
     if not isinstance(cover_value, str):
         fail("INVALID_STATE", "Missing cover path.")
     cover = contained(workspace / cover_value, task_dir / "assets")
-    if not re.fullmatch(r"01-cover\.(?:png|jpg)", cover.name, re.I):
+    if not re.fullmatch(r"01-" + ("poster" if mode == "rss-share" else "cover") + r"\.(?:png|jpg)", cover.name, re.I):
         fail("INVALID_STATE", "The cover must be a fixed task PNG or JPG.")
 
     def finish(status, code=None, message=None, media_id=None):
@@ -138,6 +183,8 @@ def run_bridge(task_dir, lock_token, title, digest, source, *, workspace=ROOT, m
     # exceptions are deliberately never stored, printed or interpolated.
     with open(os.devnull, "w", encoding="utf-8") as sink, redirect_stdout(sink), redirect_stderr(sink):
         try:
+            if mode == "rss-share":
+                validate_share(task_dir, result, title, source, workspace)
             publisher = module_loader()
             publisher.load_env_from_dotenv()
             app_id = os.environ.get("WECHAT_APP_ID")
@@ -147,18 +194,30 @@ def run_bridge(task_dir, lock_token, title, digest, source, *, workspace=ROOT, m
             args = SimpleNamespace(
                 appid=app_id, secret=app_secret, title=title, digest=digest,
                 content=None, content_file=str(article), content_format="markdown",
-                style_preset="auto", author="Aide Hub", article_type="news",
+                style_preset="auto", author="Aide Hub", article_type="newspic" if mode == "rss-share" else "news",
                 cover_image=str(cover), thumb_media_id=None, content_source_url=source,
                 ignore_image_errors=False, extra_css_file=None, image=[], image_dir=None,
                 delete_draft=None,
             )
+            if mode == "rss-share":
+                args.content = article.read_text(encoding="utf-8-sig").strip()
+                args.content_file = None
+                args.content_format = "auto"
+                args.cover_image = None
+                args.image = [str(cover)]
             # Use the original argument constraints as well as the JS validator.
             publisher.validate_args(argparse.ArgumentParser(add_help=False), args)
             token = publisher.get_access_token(app_id, app_secret)
             if not isinstance(token, str) or not token.strip():
                 return finish("failed", "WECHAT_PREPARATION_FAILED", "WeChat token or image preparation failed before draft submission.")
-            prepared = publisher.build_news_article(args, token)
-            if not isinstance(prepared, dict) or not prepared.get("thumb_media_id"):
+            prepared = publisher.build_newspic_article(args, token) if mode == "rss-share" else publisher.build_news_article(args, token)
+            valid = isinstance(prepared, dict)
+            if valid and mode == "rss-share":
+                images = prepared.get("image_info", {}).get("image_list", [])
+                valid = prepared.get("article_type") == "newspic" and len(images) == 1 and bool(images[0].get("image_media_id"))
+            elif valid:
+                valid = bool(prepared.get("thumb_media_id"))
+            if not valid:
                 return finish("failed", "WECHAT_PREPARATION_FAILED", "WeChat token or image preparation failed before draft submission.")
         except (ImportError, ModuleNotFoundError):
             return finish("failed", "WECHAT_DEPENDENCY_MISSING", "A dependency of the existing WeChat publisher is unavailable; no draft was submitted.")
