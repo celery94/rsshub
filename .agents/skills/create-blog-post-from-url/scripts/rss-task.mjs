@@ -241,7 +241,7 @@ export function createTaskRunner({ workspace = PROJECT_ROOT, environment = proce
     let api = validator;
     if (!api) api = await import("./validate-article.mjs");
     if (typeof api.validateArticle !== "function" || typeof api.parseFrontmatter !== "function") reject("VALIDATOR_UNAVAILABLE", "The validator must export validateArticle and parseFrontmatter with RSS mode support.");
-    const errors = await api.validateArticle(files.article, { mode: "rss-article", wechat: true });
+    const errors = await api.validateArticle(files.article, { mode: "rss-article" });
     if (!Array.isArray(errors) || errors.length) reject("VALIDATION_FAILED", "Article validation failed; run the article validator for details.");
     const parsed = api.parseFrontmatter(fs.readFileSync(files.article, "utf8"));
     if (parsed.error || !parsed.values || ["title", "description", "ogImage", "source"].some(key => typeof parsed.values[key] !== "string" || !parsed.values[key].trim())) reject("VALIDATION_FAILED", "Article frontmatter is incomplete.");

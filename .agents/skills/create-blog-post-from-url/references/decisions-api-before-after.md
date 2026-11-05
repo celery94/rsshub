@@ -1,6 +1,6 @@
 # Decisions API 文章前后对比
 
-这份对比以 `src/data/blog/1111-decisions-api-bounded-answers.md` 为“修改前”样本。它用来校准去 AI 味改稿，不用来替换已发布文章，也不能作为新文章的事实来源。
+这份对比以原博客仓库的 `src/data/blog/1111-decisions-api-bounded-answers.md` 为“修改前”样本（本工作区没有该文件）。它用来校准去 AI 味改稿，不用来替换已发布文章，也不能作为新文章的事实来源。
 
 原文章的事实和接口说明可以保留。需要调整的是开场、标题、过渡、段落节奏和结尾。
 

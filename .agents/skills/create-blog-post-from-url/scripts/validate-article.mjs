@@ -268,11 +268,11 @@ function validateRssImage(articlePath, reference, errors) {
   }
 }
 
+// Every article is an RSS task article: article.md beside its own assets/.
+// Callers may pass { mode: "rss-article" }; any other mode is rejected.
 export function validateArticle(articlePath, options = {}) {
   const errors = [];
-  const rssMode = options.mode === "rss-article";
-  const wechat = options.wechat || rssMode;
-  if (options.mode && !["blog", "rss-article"].includes(options.mode)) {
+  if (options.mode && options.mode !== "rss-article") {
     return [`不支持的文章模式: ${options.mode}`];
   }
   const resolvedArticle = path.resolve(articlePath);
@@ -309,24 +309,15 @@ export function validateArticle(articlePath, options = {}) {
       `description 必须为 80–120 个字符，当前 ${charLength(description)} 个`,
     );
   }
-  if (wechat && title && charLength(title) > 32) {
+  if (title && charLength(title) > 32) {
     errors.push(`微信标题最多 32 个字符，当前 ${charLength(title)} 个`);
   }
 
   if (slug && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(slug)) {
     errors.push("slug 必须使用小写 kebab-case");
   }
-  if (rssMode) {
-    if (path.basename(resolvedArticle) !== "article.md") {
-      errors.push("RSS 文章文件名必须使用 article.md");
-    }
-  } else {
-    const filenameMatch = path.basename(resolvedArticle).match(/^\d{3,}-(.+)\.md$/u);
-    if (!filenameMatch) {
-      errors.push("文章文件名必须使用 {ID}-{slug}.md");
-    } else if (slug && filenameMatch[1] !== slug) {
-      errors.push("文件名中的 slug 与 frontmatter slug 不一致");
-    }
+  if (path.basename(resolvedArticle) !== "article.md") {
+    errors.push("RSS 文章文件名必须使用 article.md");
   }
 
   if (values.pubDatetime) {
@@ -369,93 +360,52 @@ export function validateArticle(articlePath, options = {}) {
   if (!/^##\s+参考\s*$/mu.test(body)) {
     errors.push("正文必须包含 ## 参考 小节");
   }
-  if (rssMode) {
-    const section = (rssImageSource(body).split(/^##\s+参考\s*$/mu)[1] ?? "").split(/^#{1,2}\s+/mu)[0];
-    const urls = new Set([...section.matchAll(/https?:\/\/[^\s<>()]+/gu)].map(match => match[0]));
-    if (source && !urls.has(source)) errors.push("RSS 的 ## 参考 小节必须包含原文 URL 链接");
-  } else if (source && !body.includes(source)) {
-    errors.push("## 参考 小节必须包含原文 URL");
-  }
+  const imageBody = rssImageSource(body);
+  const contentBody = imageBody.split(/^##\s+参考\s*$/mu)[0];
+  const section = (imageBody.split(/^##\s+参考\s*$/mu)[1] ?? "").split(/^#{1,2}\s+/mu)[0];
+  const urls = new Set([...section.matchAll(/https?:\/\/[^\s<>()]+/gu)].map(match => match[0]));
+  if (source && !urls.has(source)) errors.push("RSS 的 ## 参考 小节必须包含原文 URL 链接");
 
-  const localReferences = new Set();
-  const imagePattern = /!\[[^\]]*\]\(\s*(?:<([^>]+)>|([^\s)]+))/gu;
-  const rssBodyImages = [];
-  const rssRequiredImages = [];
-  if (rssMode) {
-    const imageBody = rssImageSource(body);
-    const contentBody = imageBody.split(/^##\s+参考\s*$/mu)[0];
-    const images = extractRssImages(body);
-    const starts = new Set(images.map(image => image.index));
-    // Broken, escaped and reference-style syntax cannot satisfy a required image.
-    if (/<img\b/iu.test(imageBody) || [...contentBody.matchAll(/(?<!\\)!\[[^\]\n]*\]/gu)].some(match => !starts.has(match.index))) {
-      errors.push("RSS 图片必须使用完整内联 Markdown 语法 ![中文说明](./assets/image.png)");
+  const bodyImages = [];
+  const requiredImages = [];
+  const images = extractRssImages(body);
+  const starts = new Set(images.map(image => image.index));
+  // Broken, escaped and reference-style syntax cannot satisfy a required image.
+  if (/<img\b/iu.test(imageBody) || [...contentBody.matchAll(/(?<!\\)!\[[^\]\n]*\]/gu)].some(match => !starts.has(match.index))) {
+    errors.push("RSS 图片必须使用完整内联 Markdown 语法 ![中文说明](./assets/image.png)");
+  }
+  if (/(?<!\\)!\[[^\]\n]*\]/u.test(imageBody.slice(contentBody.length))) {
+    errors.push("RSS 配图必须放在正文相关段落，不能放进 ## 参考 小节");
+  }
+  for (const { alt, reference } of images) {
+    if (/[<>]/u.test(reference)) {
+      errors.push("RSS 图片路径不使用尖括号，使用 ![中文说明](./assets/image.png)");
+      continue;
     }
-    if (/(?<!\\)!\[[^\]\n]*\]/u.test(imageBody.slice(contentBody.length))) {
-      errors.push("RSS 配图必须放在正文相关段落，不能放进 ## 参考 小节");
-    }
-    for (const { alt, reference } of images) {
-      if (/[<>]/u.test(reference)) {
-        errors.push("RSS 图片路径不使用尖括号，使用 ![中文说明](./assets/image.png)");
-        continue;
+    if (!/\p{Script=Han}/u.test(alt)) errors.push(`RSS 正文图片必须有中文 alt: ${reference}`);
+    const realPath = validateRssImage(resolvedArticle, reference, errors);
+    if (realPath) {
+      bodyImages.push(realPath);
+      if (/^02-illustration-[A-Za-z0-9_-]+\.(?:png|jpg)$/iu.test(path.posix.basename(reference))) {
+        requiredImages.push(realPath);
       }
-      if (!/\p{Script=Han}/u.test(alt)) errors.push(`RSS 正文图片必须有中文 alt: ${reference}`);
-      const realPath = validateRssImage(resolvedArticle, reference, errors);
-      if (realPath) {
-        rssBodyImages.push(realPath);
-        if (/^02-illustration-[A-Za-z0-9_-]+\.(?:png|jpg)$/iu.test(path.posix.basename(reference))) {
-          rssRequiredImages.push(realPath);
-        }
-      }
-    }
-  } else {
-    for (const match of body.matchAll(imagePattern)) {
-      const reference = match[1] ?? match[2];
-      if (!/^(?:https?:|data:|#)/iu.test(reference)) localReferences.add(reference);
     }
   }
 
   const ogImage = values.ogImage ? String(values.ogImage) : "";
   if (ogImage) {
-    if (rssMode) {
-      const coverPath = validateRssImage(resolvedArticle, ogImage, errors);
-      if (!/^\.\/assets\/01-cover\.(?:png|jpg)$/iu.test(ogImage)) {
-        errors.push("RSS 封面必须使用 ./assets/01-cover.png 或 .jpg");
-      }
-      if (!rssRequiredImages.some(image => image !== coverPath)) {
-        errors.push("RSS 文章必须包含至少一张与封面不同的本地正文图片 assets/02-illustration-{topic}.png 或 .jpg");
-      }
-    } else {
-      localReferences.add(ogImage);
+    const coverPath = validateRssImage(resolvedArticle, ogImage, errors);
+    if (!/^\.\/assets\/01-cover\.(?:png|jpg)$/iu.test(ogImage)) {
+      errors.push("RSS 封面必须使用 ./assets/01-cover.png 或 .jpg");
     }
-  } else {
-    if (wechat) errors.push("微信发布必须提供 ogImage 封面");
-    if (rssMode && rssBodyImages.length === 0) {
-      errors.push("RSS 文章必须包含至少一张本地正文图片");
+    if (!requiredImages.some(image => image !== coverPath)) {
+      errors.push("RSS 文章必须包含至少一张与封面不同的本地正文图片 assets/02-illustration-{topic}.png 或 .jpg");
     }
-  }
-
-  for (const reference of localReferences) {
-    let localPath;
+    // The brief always lives in the task's assets/, even if the cover reference
+    // is invalid; never read a brief outside the task.
     try {
-      localPath = resolveLocalReference(resolvedArticle, reference);
-    } catch {
-      errors.push(`资源路径无法解析: ${reference}`);
-      continue;
-    }
-    if (!fs.existsSync(localPath)) {
-      errors.push(`资源不存在: ${reference}`);
-    }
-  }
-
-  if (wechat && ogImage) {
-    try {
-      const coverPath = resolveLocalReference(resolvedArticle, ogImage);
-      // RSS stores the brief in assets even if the cover reference is invalid;
-      // never read a brief outside the task through an unchecked reference.
-      const briefPath = rssMode
-        ? path.join(path.dirname(resolvedArticle), "assets", "cover-brief.json")
-        : path.join(path.dirname(coverPath), "cover-brief.json");
-      if (rssMode && fs.existsSync(briefPath) && !isWithin(fs.realpathSync(path.dirname(resolvedArticle)), fs.realpathSync(briefPath))) {
+      const briefPath = path.join(path.dirname(resolvedArticle), "assets", "cover-brief.json");
+      if (fs.existsSync(briefPath) && !isWithin(fs.realpathSync(path.dirname(resolvedArticle)), fs.realpathSync(briefPath))) {
         errors.push("RSS 封面 brief 实际路径越出任务目录");
       } else {
         validateCoverBrief(briefPath, title, errors);
@@ -463,21 +413,23 @@ export function validateArticle(articlePath, options = {}) {
     } catch {
       errors.push("封面或 brief 路径无法解析");
     }
+  } else {
+    errors.push("微信发布必须提供 ogImage 封面");
+    if (bodyImages.length === 0) errors.push("RSS 文章必须包含至少一张本地正文图片");
   }
 
   return errors;
 }
 
 function parseArguments(argv) {
-  const options = { wechat: false, allowFuture: false, mode: "blog" };
+  const options = { allowFuture: false };
   let articlePath;
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
-    if (argument === "--wechat") options.wechat = true;
-    else if (argument === "--allow-future") options.allowFuture = true;
+    if (argument === "--allow-future") options.allowFuture = true;
     else if (argument === "--mode") {
       const mode = argv[++index];
-      if (!["blog", "rss-article"].includes(mode)) throw new Error("--mode 必须为 blog 或 rss-article");
+      if (mode !== "rss-article") throw new Error("--mode 只支持 rss-article");
       options.mode = mode;
     } else if (argument.startsWith("--") || articlePath) {
       throw new Error(`无法识别的参数: ${argument}`);
@@ -501,7 +453,7 @@ if (isMain) {
   const { articlePath, options } = parsed;
   if (!articlePath) {
     console.error(
-      "用法: node validate-article.mjs <article.md> [--mode blog|rss-article] [--wechat] [--allow-future]",
+      "用法: node validate-article.mjs <task>/article.md [--mode rss-article] [--allow-future]",
     );
     process.exit(2);
   }

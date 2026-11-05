@@ -3,7 +3,7 @@
 check-references.py - 校验文章参考链接的可访问性，失效链接提示使用 Internet Archive 存档。
 
 用法:
-  python check-references.py src/data/blog/985-when-to-use-microservices.md
+  python check-references.py output/rss-articles/<task_id>/article.md
   python check-references.py --skip-archive 检查后不输出 archive.org 建议
 
 判定规则:

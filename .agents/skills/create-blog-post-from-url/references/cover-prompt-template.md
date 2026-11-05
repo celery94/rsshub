@@ -10,25 +10,11 @@
 - [封面验收与示例](#9-封面使用要求)
 - [正文插图](#11-正文插图)
 
-创建文章封面或正文插图时读取本模板。封面先生成**封面 brief**和第一轮 prompt，再选择可用的图像生成 / 编辑技能执行。博客模式默认不要预设固定 backend；用户明确要求 Azure 时使用 `azure-image-gen`。
+`rss-article` 制作封面或正文插图时读取本模板。封面先写**封面 brief**和 prompt，再用 `azure-image-gen` 生成。
 
-### RSS 单篇调用
-
-`rss-article` 模式先读取 [rss-article-workflow.md](rss-article-workflow.md)，其路径与必需图片要求覆盖本模板中的博客路径和可选配图规则：
-
-- 图片保存在 `output/rss-articles/{task_id}/assets/`；brief 为该目录内 `cover-brief.json`，封面为 `01-cover.png` 或 `.jpg`，正文插图为 `02-illustration-{topic}.png` 或 `.jpg`。
-- frontmatter `ogImage` 和正文图片均使用相对于 `article.md` 的 `./assets/...` 路径；微信封面使用解析后的本地路径。
-- 默认一张封面加一张有解释目标的正文图；按内容需要增加第二张正文图。首张正文图失败时停止微信上传，不得按“可选插图失败”规则省略后发布。
-- 当前环境使用 `azure-image-gen`，按该技能检查本地配置。封面终稿与正文图都加 `--skip-post-process`，避免被默认后处理缩至 500 像素；封面可用 `2256x960`，正文可用 `1536x864`，最终为 PNG/JPG。
-- 默认 HD-2D，继续读取 `hd-2d-style.md` 并展开实际风格描述；每张正文图记录段落、解释目标、来源锚点和 prompt，中文 alt 必须区分概念示意与真实证据。
-- 生成前把整幅像素化写进 `final_prompt`：建筑立面、桥、挡土墙、路面、树木和车辆都由同一像素尺度的色块构成，同时保留三维透视、前中后层次与共同光影。只写 `HD-2D`、`pixel art` 或风格名会得到光滑的写实渲染。
-- 关键空间关系写成可核对条件，例如底层半埋进坡体、桥从上层道路接入二层；标签要完整落在画面内并留边距，避免贴边裁切。
-- 可见文字默认只用 1–3 个带底框的中文短标签或数字 chip；禁止横幅、漂浮标题、海报标题和长句。先用宽图确认摘要弧线，再按需要定向修改。
-- 首轮只要主题、构图和标签正确就接受，不为细节反复重生；只对 1–3 个具体问题做一次定向修改，同一张图最多重生成 2 次。
-
-RSS 的图片计划、生成与验收沿用本模板其余规则。第二张正文图为可选项，失败可移除引用并记录说明。
-
-不要默认“一次生成 = 最终封面”。先确认主题、摘要弧线、主体、构图和选定视觉风格是否成立，再根据问题做一次定向编辑或重生。
+- 所有图片保存在任务目录 `assets/`：brief 为 `cover-brief.json`，封面为 `01-cover.png`，正文插图为 `02-illustration-{topic}.png`，实际为 JPG 时改扩展名。`ogImage` 和正文图片使用相对于 `article.md` 的 `./assets/...` 路径。
+- 生图尺寸、像素化写法、可见文字和一次成图的重试上限见 [rss-article-workflow.md](rss-article-workflow.md) 第 3 节，本模板不重复。
+- 生成后先确认主题、摘要弧线、主体、构图和风格成立，再决定接受还是做一次定向修改。
 
 ## 1. 先判断封面类型
 
@@ -50,7 +36,7 @@ RSS 的图片计划、生成与验收沿用本模板其余规则。第二张正�
 
 ## 2. 先保存封面 brief
 
-生成 prompt 前先写出这些信息，并保存到 `src/assets/{ID}/cover-brief.json`。不要跳过 brief 直接写 prompt。
+生成 prompt 前先写出这些信息，并保存到任务目录的 `assets/cover-brief.json`。不要跳过 brief 直接写 prompt。
 
 ```json
 {
@@ -128,23 +114,13 @@ RSS 的图片计划、生成与验收沿用本模板其余规则。第二张正�
 - 优先保证摘要清楚、主体明确、信息可读，避免堆砌风格词。
 - `architecture` 与 `research` 可用分镜和局部说明，但不能伪造真实系统图、仪表盘或论文图表。
 
-## 6. 选择生图技能
+## 6. 生图
 
-- 默认保持 backend-agnostic：根据当前环境里**可用**的图像生成 / 编辑技能完成封面和正文插图，不要把模板写死到某一个特定生成器
-- 封面默认是宽图，prompt 里写明 `wide cover illustration, aspect ratio 2.35:1`
-- 如果所选工具先把图片输出到临时目录、默认目录或中间路径，最终选中后将封面移动或复制到 `src/assets/{ID}/01-cover.{ext}`；正文插图按第 11 节命名保存
-- 不要让 `ogImage`、正文图片引用或微信封面引用继续指向临时生成目录
-- 如果第一轮主题对但细节有问题，优先编辑或定向重生一次；每轮只改 1-3 个明确问题
-- 如果第一轮主题就不对，回到 brief，至少改“摘要角度 / 主隐喻 / 构图方式”中的两项后重新生成
-- 如果用户明确要求 Azure / `azure-image-gen` / Azure OpenAI，必须尊重该要求
-
-仅在使用 `azure-image-gen` 时，参考这些参数：
-
-- 封面草图阶段：`size 1504x640`，`quality low`
-- 封面终稿阶段：`size 2256x960`，`quality medium`
-- 正文插图：选用工具支持的 16:9 尺寸，例如 `size 1536x864`，`quality medium`；跳过脚本默认的封面后处理（`--skip-post-process`），避免正文图被缩到封面宽度
-- `background` 只用 `auto` 或 `opaque`
-- 当前脚本即使传 `--n > 1` 也只保存第一张，所以多方案探索要分多次生成或改走编辑流
+- 封面是宽图，prompt 里写明 `wide cover illustration, aspect ratio 2.35:1`。
+- 生图时直接用 `--output` 指定任务 `assets/` 下的最终路径，`ogImage` 和正文引用不能指向临时目录。
+- 第一轮主题对但细节有问题，做一次定向修改，每轮只改 1–3 个明确问题。
+- 第一轮主题就不对，回到 brief，至少改“摘要角度 / 主隐喻 / 构图方式”中的两项后重新生成。
+- `background` 只用 `auto` 或 `opaque`。脚本即使传 `--n > 1` 也只保存第一张。
 
 ## 7. 允许信息与统一禁令
 
@@ -193,7 +169,7 @@ RSS 的图片计划、生成与验收沿用本模板其余规则。第二张正�
 
 ```text
 Use case: infographic-story
-Asset type: wide cover infographic illustration for a Chinese tech blog article
+Asset type: wide cover infographic illustration for a Chinese WeChat tech article
 Primary request: Create a wide cinematic infographic-story cover illustration that summarizes the article. Theme: {核心主题}. The reader should quickly feel {读者收获}.
 
 Summary angle: {摘要角度}.
@@ -268,7 +244,7 @@ Avoid {禁用元素}.
 - **主题对但摘要不清楚**：压缩 `information_blocks`，重写 `summary_angle` / `narrative_flow`
 - **主题对但细节不对**：优先编辑或定向重生
 - **只有局部出错**：只修局部问题，不推倒整张图
-- **已经合格**：移动或复制到 `src/assets/{ID}/01-cover.{ext}`，更新 Markdown / `ogImage` / 微信封面路径
+- **已经合格**：确认文件位于任务 `assets/01-cover.png`（或 `.jpg`），`ogImage` 指向该文件
 
 合格封面的最低标准：
 
@@ -297,32 +273,32 @@ Avoid {禁用元素}.
 - 解释目标：帮助读者理解三段职责和交接顺序。
 - 来源依据：对应正文和原文中的三个阶段，不新增模块名或指标。
 - 画面：16:9 微缩场景中，三个像素工作台通过传递同一个任务物件表达交接；与封面的像素尺度、配色和光影一致。
-- 文件：`src/assets/{ID}/02-illustration-task-flow.png`
-- 正文引用：`![任务从采集到分析再到汇总的概念示意](../../assets/{ID}/02-illustration-task-flow.png)`
+- 文件：`assets/02-illustration-task-flow.png`
+- 正文引用：`![任务从采集到分析再到汇总的概念示意](./assets/02-illustration-task-flow.png)`
 
 ## 11. 正文插图
 
 ### 添加条件与位置
 
-- 正文插图按内容需要添加，通常 0–2 张；只有能帮助理解流程、机制、前后变化或方案对比时才生成。短文或已有充分图解时不额外添加，不为每个章节凑图。
+- 正文插图默认一张，必须与封面不同；能帮助理解第二个流程、机制、前后变化或方案对比时再加第二张，不为每个章节凑图。
 - 每张图先明确对应段落、解释目标、来源锚点、主体关系和最终 prompt；不要求新建一套固定 JSON 格式。
 - 将图放在相关概念首次完整解释之后或对比段落附近，避免打断代码块、步骤或连续论证，不放在文末集中堆图。
 - 真实操作截图、实验数据图、准确流程图和架构图保留原貌。新增插图用于概念说明，不能代替原始证据；必要时在 alt 或图注标注「概念示意」。
-- 「不要封面」只跳过封面及其 brief、`ogImage`；正文插图可独立生成。「不要配图」跳过全部图片生成，已有真实截图与技术图仍按内容需要保留。
+- 用户当次要求不配图时，按 `rss-article-workflow.md` 的「执行约定」处理：保留产物，说明未达到草稿交付标准。
 
 ### 风格、保存与验收
 
 - 默认 16:9，每张围绕一个解释目标；使用第 4 节引用的 HD-2D 描述，与封面保持配色、像素尺度和光影协调。无封面时先确定一组统一的视觉设定，用于同篇所有新增插图。解释关系需要更清楚时减弱或关闭景深。
 - 用户当次指定其他风格时，按第 5 节处理覆盖范围。仍保留来源依据和信息真实性要求。
-- 保存为 `src/assets/{ID}/02-illustration-{topic}.png` 或 `.jpg`，后续依次编号为 `03-illustration-{topic}` 等，`topic` 使用简短英文 kebab-case。避免与已有文件重名，不覆盖真实截图和其他资源。
-- 使用 `../../assets/{ID}/{filename}` 引用最终文件并补中文 alt；仅将封面路径写入 `ogImage` 与微信 `cover-image`，正文插图通过 Markdown 正文发布。
+- 保存为 `assets/02-illustration-{topic}.png` 或 `.jpg`，第二张为 `03-illustration-{topic}`，`topic` 使用简短英文 kebab-case。不覆盖真实截图和其他资源。
+- 使用 `./assets/{filename}` 引用并补中文 alt，alt 要区分概念示意与真实证据；只有封面写入 `ogImage`。
 - 检查内容与来源一致、主体关系可读、风格一致、文件及引用有效；HD-2D 的具体视觉检查和修正见 `hd-2d-style.md`。禁止虚构界面、命令输出、实验指标、技术标签、坐标轴和架构节点；生成图片适用第 7 节禁令。
-- 首轮有问题时，只修正明确的 1–3 项后再检查。可选插图生成或精修后仍无法合格时，省略该图并删除对应正文引用，在最终报告说明；正文仍须能独立读懂。
+- 首轮有问题时，只修正明确的 1–3 项后再检查。首张正文图是必需产物，仍不合格时停止微信上传；第二张不合格时省略该图并删除正文引用，在最终报告说明。
 
 ### 正文插图 prompt
 
 ```text
-Asset type: inline explanatory illustration for a Chinese tech blog, aspect ratio 16:9.
+Asset type: inline explanatory illustration for a Chinese WeChat tech article, aspect ratio 16:9.
 Explanation goal: {本图唯一解释目标}.
 Source-grounded content: {对应段落、来源锚点与需要表达的关系}.
 Subject and action: {主体与动作}.

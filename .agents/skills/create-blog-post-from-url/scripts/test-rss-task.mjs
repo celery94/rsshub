@@ -153,7 +153,7 @@ test("real validator is called with RSS and WeChat modes before offline success"
   let calls = 0;
   let validated = false;
   const f = fixture(t, { validator: { ...articleValidator, validateArticle: (file, options) => {
-    assert.deepEqual(options, { mode: "rss-article", wechat: true });
+    assert.deepEqual(options, { mode: "rss-article" });
     const errors = validateArticle(file, options); assert.deepEqual(errors, []); validated = true; return errors;
   } }, runBridge: request => {
     assert.ok(validated);
