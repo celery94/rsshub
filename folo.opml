@@ -16,6 +16,10 @@
         <outline text="simonwillison.net" title="simonwillison.net" xmlUrl="https://simonwillison.net/atom/everything/" htmlUrl="http://simonwillison.net/" type="rss" />
         <outline text="OpenAI News" title="OpenAI News" xmlUrl="https://openai.com/news/rss.xml" htmlUrl="https://openai.com/news" type="rss" />
         <outline text="宝玉的博客" title="宝玉的博客" xmlUrl="https://baoyu.io/feed.xml" htmlUrl="https://baoyu.io/" type="rss" />
+        <outline text="Hamel Husain" title="Hamel Husain" xmlUrl="https://hamel.dev/index.xml" htmlUrl="https://hamel.dev/" type="rss" />
+        <outline text="Eugene Yan" title="Eugene Yan" xmlUrl="https://eugeneyan.com/rss/" htmlUrl="https://eugeneyan.com/" type="rss" />
+        <outline text="Lil’Log · Lilian Weng" title="Lil’Log · Lilian Weng" xmlUrl="https://lilianweng.github.io/index.xml" htmlUrl="https://lilianweng.github.io/" type="rss" />
+        <outline text="科学空间 · 苏剑林" title="科学空间 · 苏剑林" xmlUrl="https://kexue.fm/feed/" htmlUrl="https://kexue.fm/" type="rss" />
       </outline>
       <outline text="编程语言与软件工程" title="编程语言与软件工程">
         <outline text="danielchasehooper.com" title="danielchasehooper.com" xmlUrl="https://danielchasehooper.com/feed.xml" htmlUrl="https://danielchasehooper.com/feed.xml" type="rss" />
@@ -42,6 +46,9 @@
         <outline text="Tech World With Milan Newsletter" title="Tech World With Milan Newsletter" xmlUrl="https://newsletter.techworld-with-milan.com/feed" htmlUrl="https://newsletter.techworld-with-milan.com/" type="rss" />
         <outline text="entropicthoughts.com" title="entropicthoughts.com" xmlUrl="https://entropicthoughts.com/feed.xml" htmlUrl="https://entropicthoughts.com/" type="rss" />
         <outline text="susam.net" title="susam.net" xmlUrl="https://susam.net/feed.xml" htmlUrl="https://susam.net/" type="rss" />
+        <outline text="Martin Fowler" title="Martin Fowler" xmlUrl="https://martinfowler.com/feed.atom" htmlUrl="https://martinfowler.com/" type="rss" />
+        <outline text="夜天之书 · tison" title="夜天之书 · tison" xmlUrl="https://www.tisonkun.org/atom.xml" htmlUrl="https://www.tisonkun.org/" type="rss" />
+        <outline text="美团技术团队" title="美团技术团队" xmlUrl="https://tech.meituan.com/rss.xml" htmlUrl="https://tech.meituan.com/" type="rss" />
       </outline>
       <outline text="系统与云基础设施" title="系统与云基础设施">
         <outline text="maurycyz.com" title="maurycyz.com" xmlUrl="https://maurycyz.com/index.xml" htmlUrl="https://maurycyz.com/" type="rss" />
@@ -53,6 +60,9 @@
         <outline text="michael.stapelberg.ch" title="michael.stapelberg.ch" xmlUrl="https://michael.stapelberg.ch/feed.xml" htmlUrl="https://michael.stapelberg.ch/" type="rss" />
         <outline text="mitchellh.com" title="mitchellh.com" xmlUrl="https://mitchellh.com/feed.xml" htmlUrl="https://mitchellh.com/" type="rss" />
         <outline text="matduggan.com" title="matduggan.com" xmlUrl="https://matduggan.com/rss/" htmlUrl="https://matduggan.com/" type="rss" />
+        <outline text="Marc Brooker" title="Marc Brooker" xmlUrl="https://brooker.co.za/blog/rss.xml" htmlUrl="https://brooker.co.za/blog/" type="rss" />
+        <outline text="Julia Evans" title="Julia Evans" xmlUrl="https://jvns.ca/atom.xml" htmlUrl="https://jvns.ca/" type="rss" />
+        <outline text="Cloudflare Blog" title="Cloudflare Blog" xmlUrl="https://blog.cloudflare.com/rss/" htmlUrl="https://blog.cloudflare.com/" type="rss" />
       </outline>
       <outline text="安全与隐私" title="安全与隐私">
         <outline text="brutecat.com" title="brutecat.com" xmlUrl="https://brutecat.com/rss.xml" htmlUrl="https://brutecat.com/" type="rss" />
@@ -71,6 +81,7 @@
         <outline text="Code Maze" title="Code Maze" xmlUrl="https://code-maze.com/feed/" htmlUrl="https://code-maze.com/" type="rss" />
         <outline text="codewithmukesh" title="codewithmukesh" xmlUrl="https://codewithmukesh.com/rss.xml" htmlUrl="https://codewithmukesh.com/" type="rss" />
         <outline text="Milan's .NET Weekly" title="Milan's .NET Weekly" xmlUrl="https://milanjovanovic.tech/rss/feed.xml" htmlUrl="https://milanjovanovic.tech/" type="rss" />
+        <outline text="Artech" title="Artech" xmlUrl="https://feed.cnblogs.com/blog/u/22886/rss/" htmlUrl="https://www.cnblogs.com/artech/" type="rss" />
       </outline>
       <outline text="硬件与计算机史" title="硬件与计算机史">
         <outline text="downtowndougbrown.com" title="downtowndougbrown.com" xmlUrl="https://www.downtowndougbrown.com/feed/" htmlUrl="https://www.downtowndougbrown.com/" type="rss" />
@@ -90,6 +101,7 @@
         <outline text="experimental-history.com" title="experimental-history.com" xmlUrl="https://www.experimental-history.com/feed" htmlUrl="https://www.experimental-history.com/" type="rss" />
         <outline text="johndcook.com" title="johndcook.com" xmlUrl="https://www.johndcook.com/blog/feed/" htmlUrl="https://www.johndcook.com/blog" type="rss" />
         <outline text="construction-physics.com" title="construction-physics.com" xmlUrl="https://www.construction-physics.com/feed" htmlUrl="https://www.construction-physics.com/" type="rss" />
+        <outline text="Quanta Magazine" title="Quanta Magazine" xmlUrl="https://www.quantamagazine.org/feed/" htmlUrl="https://www.quantamagazine.org/" type="rss" />
       </outline>
       <outline text="产品设计与效率工具" title="产品设计与效率工具">
         <outline text="aresluna.org" title="aresluna.org" xmlUrl="https://aresluna.org/main.rss" htmlUrl="https://www.aresluna.org/" type="rss" />
@@ -108,6 +120,7 @@
         <outline text="paulgraham.com" title="paulgraham.com" xmlUrl="http://www.aaronsw.com/2002/feeds/pgessays.rss" htmlUrl="http://www.paulgraham.com/" type="rss" />
         <outline text="wheresyoured.at" title="wheresyoured.at" xmlUrl="https://www.wheresyoured.at/rss/" htmlUrl="https://www.wheresyoured.at/" type="rss" />
         <outline text="anildash.com" title="anildash.com" xmlUrl="https://www.anildash.com/feed.xml" htmlUrl="https://anildash.com/" type="rss" />
+        <outline text="Benedict Evans" title="Benedict Evans" xmlUrl="https://www.ben-evans.com/benedictevans?format=rss" htmlUrl="https://www.ben-evans.com/" type="rss" />
       </outline>
       <outline text="科技资讯与项目发现" title="科技资讯与项目发现">
         <outline text="Hacker News: Best" title="Hacker News: Best" xmlUrl="https://hnrss.org/best" htmlUrl="https://news.ycombinator.com/best" type="rss" />

@@ -34,3 +34,4 @@ __pycache__/
 
 # Local RSS article tasks (inputs, generated images, WeChat results)
 output
+*.bak
