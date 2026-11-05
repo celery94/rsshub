@@ -35,6 +35,14 @@ test('editorial rejects missing, unknown, wrong-type and cross-layout fields',()
  for(const value of invalid)assert.throws(()=>validateEditorial(value));
  for(const bad of [{heading:'',body:sections[0].body},{heading:'长'.repeat(13),body:sections[0].body},{heading:'Heading',body:sections[0].body},{heading:'增长',body:'短句'},{heading:'增长',body:'文'.repeat(81)},{heading:'增长',body:'a'.repeat(20)},{heading:'增长',body:'**需要检查时间区间和预测口径**'},{...sections[0],extra:1},null])assert.throws(()=>validateEditorial({...editorial('insight'),sections:[bad,sections[1]]}));
 });
+test('optional kicker and numeric highlights are accepted only where they fit the layout',t=>{
+ const highlights=[{value:'2 周',label:'找到利用方式'},{value:'2 个月',label:'官方补丁耗时'}];
+ for(const layout of ['insight','steps'])assert.doesNotThrow(()=>validateEditorial({...editorial(layout),kicker:'安全观察',highlights}));
+ assert.doesNotThrow(()=>validateEditorial({...editorial('comparison'),kicker:'财报速读'}));
+ const f=fixture(t);f.save({editorial:{...editorial('insight'),kicker:'安全观察',highlights}});assert.deepEqual(validateShare(f.dir),[]);
+ for(const extra of [{highlights},{kicker:'安'},{kicker:'Security'},{kicker:'安全观察安全观察安'}])assert.throws(()=>validateEditorial({...editorial(extra.highlights?'comparison':'insight'),...extra}));
+ for(const bad of [highlights.slice(0,1),[...highlights,...highlights],[{value:'Cron',label:'定时执行'},highlights[1]],[{...highlights[0],extra:1},highlights[1]],[{value:'123456789',label:'过长数值'},highlights[1]],[{value:'2',label:'week'},highlights[1]],null])assert.throws(()=>validateEditorial({...editorial('insight'),highlights:bad}));
+});
 test('comparison keeps same units and bounded plain-text data fields',()=>{
  for(const [key,max] of [['name',12],['value',16],['unit',12]])for(const value of ['',null,{},'x'.repeat(max+1),'<b>bad</b>']){
   const bad=editorial('comparison');bad.comparison.left[key]=value;assert.throws(()=>validateEditorial(bad));

@@ -7,7 +7,7 @@ import unittest
 from PIL import Image, ImageDraw, ImageChops
 import test_rss_share as helper
 from share_editorial import validate_editorial
-from editorial_poster import fit_text, wrap_editorial
+from editorial_poster import balanced, fit_text, wrap_editorial
 
 SECTIONS=[
  {'heading':'增长来源','body':'数据中心需求支持业务增长，但仍需结合客户需求、利润率变化与后续订单核对增长质量。'},
@@ -177,6 +177,46 @@ class EditorialTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'headline:'):helper.RENDER.render(self.scene,self.f.task/'share.json')
         draw=ImageDraw.Draw(Image.new('RGB',(100,100)))
         with self.assertRaises(ValueError):fit_text(draw,'无法在狭窄范围完整排版',helper.RENDER.local_font(),10,10,target=48,minimum=42,max_lines=2)
+
+    def test_kicker_highlights_cards_and_brand_render(self):
+        for layout in ('insight','steps'):
+            with self.subTest(layout=layout):
+                value=self.manifest(layout)
+                value['editorial'].update(kicker='安全观察',highlights=[{'value':'40 年','label':'遗留代码累积'},{'value':'2 周','label':'找到利用方式'},{'value':'2 个月','label':'官方补丁耗时'}])
+                self.f.write('share.json',value)
+                meta=helper.RENDER.render(self.scene,self.f.task/'share.json')['editorial']
+                roles=[r['role'] for r in meta['text_regions']]
+                self.assertEqual(meta['highlight_count'],3)
+                self.assertEqual(roles.count('highlight_value'),3);self.assertEqual(roles.count('kicker'),1);self.assertEqual(roles.count('brand'),1)
+                brand=next(r for r in meta['text_regions'] if r['role']=='brand');self.assertEqual(brand['lines'],['Aide Hub'])
+                values=[r for r in meta['text_regions'] if r['role']=='highlight_value']
+                self.assertTrue(all(r['box'][1]>=300 and r['box'][3]<=meta['scene_box'][1] for r in values) if layout=='insight' else True)
+                self.assertGreaterEqual(meta['body_font_size'],42)
+                with Image.open(self.f.poster) as image:
+                    # Section cards are lighter than the page background.
+                    card=next(r for r in meta['text_regions'] if r['role']=='section_heading')['box']
+                    self.assertEqual(image.convert('RGB').getpixel((card[2]+10,card[1]+4)),(252,250,244))
+
+    def test_invalid_kicker_and_highlights_never_render(self):
+        good=[{'value':'2 周','label':'找到利用方式'},{'value':'2 个月','label':'官方补丁耗时'}]
+        cases=[('comparison',{'highlights':good}),('insight',{'highlights':good[:1]}),('insight',{'highlights':good*2}),
+               ('insight',{'highlights':[{'value':'Cron','label':'定时执行'},good[0]]}),('insight',{'highlights':[{**good[0],'extra':1},good[1]]}),
+               ('insight',{'highlights':[{'value':'123456789','label':'过长数值'},good[1]]}),('insight',{'highlights':[{'value':'2','label':'week'},good[1]]}),
+               ('insight',{'kicker':'安'}),('insight',{'kicker':'安全观察安全观察安'}),('insight',{'kicker':'Security'})]
+        for layout,extra in cases:
+            with self.subTest(layout=layout,extra=extra):
+                bad=editorial(layout);bad.update(extra)
+                with self.assertRaises(ValueError):validate_editorial(bad,required=True,present=True)
+
+    def test_balanced_wrap_avoids_short_last_line(self):
+        draw=ImageDraw.Draw(Image.new('RGB',(1536,2048)))
+        font=__import__('PIL.ImageFont',fromlist=['ImageFont']).truetype(str(helper.RENDER.local_font()),44)
+        text='用自然语言写需求，AI 生成筛选标准，逐条分析商品图文与卖家信息。'
+        width=1240
+        plain_lines=wrap_editorial(draw,text,font,width)
+        self.assertLessEqual(len(plain_lines[-1].rstrip('。')),4)
+        lines=balanced(draw,text,font,width)
+        self.assertEqual(len(lines),len(plain_lines));self.assertGreater(len(lines[-1].rstrip('。')),4);self.assertEqual(''.join(lines).replace(' ',''),text.replace(' ',''))
 
     def test_editorial_preserves_latin_names_and_chinese_punctuation(self):
         draw=ImageDraw.Draw(Image.new('RGB',(1536,2048)))

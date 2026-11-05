@@ -236,7 +236,7 @@
     {
       "id": 15,
       "prompt": "使用 rss-share 模式处理任务 rss-share-opinion-001：原文是一篇关于 AI 编程工具趋势的评论，只有一个市场规模数字，没有可比的第二个数据。",
-      "expected_output": "没有两项同口径数据，使用 insight 版式，不补造比较对象，也不把预测写成实绩。sections 写 4–5 个不同的事实、原因、影响和限制，限制条件能在图上读到；caption 100–200 字，末行为来源 URL。",
+      "expected_output": "没有两项同口径数据，使用 insight 版式，不补造比较对象，也不把预测写成实绩。sections 写 4–5 个不同的事实、原因、影响和限制，限制条件能在图上读到；caption 100–200 字，末行为来源 URL。只有一个数字，凑不满两个真实数字，因此省略 highlights；kicker 写内容类别，如「行业观察」。",
       "files": [],
       "assertions": [
         {
@@ -247,6 +247,9 @@
         },
         {
           "text": "The caption is 100–200 Chinese characters plus a source line with the exact normalized URL."
+        },
+        {
+          "text": "highlights are omitted unless the source gives at least two real figures; no non-numeric words fill the row."
         }
       ]
     },

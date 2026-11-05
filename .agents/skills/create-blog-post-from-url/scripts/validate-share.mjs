@@ -19,8 +19,14 @@ function editorialText(value,min,max,chinese=false) {
 }
 export function validateEditorial(value,required=false,present=value!==undefined) {
   if(!required && !present) return;
-  editorialObject(value,['layout','sections'],['comparison']);
+  editorialObject(value,['layout','sections'],['comparison','kicker','highlights']);
   if(!['comparison','insight','steps'].includes(value.layout)) throw new Error('Editorial layout must be comparison, insight or steps.');
+  if(Object.hasOwn(value,'kicker')) editorialText(value.kicker,2,8,true);
+  if(Object.hasOwn(value,'highlights')){
+    if(value.layout==='comparison') throw new Error('The comparison layout already shows its metrics; highlights are not accepted.');
+    if(!Array.isArray(value.highlights) || value.highlights.length<2 || value.highlights.length>3) throw new Error('Editorial highlights require two or three items.');
+    for(const item of value.highlights){editorialObject(item,['value','label']);editorialText(item.value,1,8);editorialText(item.label,2,12,true);if(!/\d/.test(item.value))throw new Error('Each highlight value must contain a number from the source.');}
+  }
   if(!Array.isArray(value.sections) || value.sections.length<2 || value.sections.length>5) throw new Error('Editorial requires two to five sections.');
   for(const section of value.sections){editorialObject(section,['heading','body']);editorialText(section.heading,1,12,true);editorialText(section.body,12,80,true);}
   if(value.layout==='comparison'){
