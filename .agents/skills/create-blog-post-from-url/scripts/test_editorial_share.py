@@ -224,4 +224,25 @@ class EditorialTests(unittest.TestCase):
         lines=wrap_editorial(draw,'比较 AMD 与 Intel 的业务表现，仍需核对实际增长来源。',font,700)
         self.assertTrue(any('Intel' in line for line in lines));self.assertFalse(any(line.startswith(('，','。','、')) for line in lines))
 
+    def test_check_mode_fits_text_without_scene_or_poster_write(self):
+        self.manifest('insight')
+        before=self.f.poster.read_bytes()
+        result=helper.RENDER.render(None,self.f.task/'share.json',check=True)
+        self.assertTrue(result['check']);self.assertIsNone(result['poster_path'])
+        self.assertEqual(result['editorial']['layout'],'insight')
+        self.assertEqual(self.f.poster.read_bytes(),before)
+        roles={region['role'] for region in result['editorial']['text_regions']}
+        for role in ('headline','conclusion','section_heading','section_body','source','brand'):
+            self.assertIn(role,roles)
+        self.assertGreaterEqual(result['editorial']['body_font_size'],34)
+
+    def test_focal_option_recenters_scene_crop(self):
+        self.manifest('insight')
+        center=lambda crop:(crop[1]+crop[3])/2
+        base=helper.RENDER.render(self.scene,self.f.task/'share.json')['editorial']['scene_crop']
+        shifted=helper.RENDER.render(self.scene,self.f.task/'share.json',focal=0.4)['editorial']['scene_crop']
+        self.assertAlmostEqual(center(base),0.625,places=3)
+        self.assertAlmostEqual(center(shifted),0.4,places=3)
+        self.assertAlmostEqual(shifted[0],0.0,places=6);self.assertAlmostEqual(shifted[2],1.0,places=6)
+
 if __name__=='__main__':unittest.main()

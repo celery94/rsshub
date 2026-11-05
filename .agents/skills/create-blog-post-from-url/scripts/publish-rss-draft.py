@@ -95,29 +95,70 @@ def load_publisher():
     return module
 
 
-def validate_share(task_dir, result, title, source, workspace):
-    """Validate fixed share paths and decode every pixel before any API call."""
+def decode_share_image(file, *, min_side=1080, max_side=4096):
+    """Decode one final share image before any API call."""
     from PIL import Image
-    parsed_source = urlsplit(source)
-    if parsed_source.scheme not in ("http", "https") or not parsed_source.hostname or parsed_source.username or parsed_source.password:
-        fail("INVALID_SHARE", "Invalid source URL.")
-    ancestors = []
-    current = task_dir
-    while current != workspace:
-        ancestors.append(current)
-        current = current.parent
-    for item in (*ancestors, *task_dir.rglob("*")):
-        if item.is_symlink() or (hasattr(item, "is_junction") and item.is_junction()):
-            fail("INVALID_SHARE", "Share symbolic links and junctions are forbidden.")
-    manifest = read_json(contained(task_dir / "share.json", task_dir))
-    fields = {"title", "caption", "source", "headline", "subtitle", "poster"}
-    if not isinstance(manifest, dict) or set(manifest) - (fields | {"key_points", "editorial"}) or not fields.issubset(manifest) or any(not isinstance(manifest[key], str) or not manifest[key].strip() for key in fields):
-        fail("INVALID_SHARE", "Incomplete share manifest.")
-    input_data = read_json(contained(task_dir / "input.json", task_dir))
-    if "poster_layout" in input_data and input_data["poster_layout"] not in ("content", "editorial"):
-        fail("INVALID_SHARE", "poster_layout must be content or editorial when provided.")
+    if not file.is_file():
+        fail("INVALID_SHARE", "A share image is missing.")
+    expected_format = "PNG" if file.suffix.lower() == ".png" else "JPEG"
+    with Image.open(file) as image:
+        if image.format != expected_format or image.width < min_side or image.height < min_side or image.width > max_side or image.height > max_side or getattr(image, "n_frames", 1) != 1:
+            fail("INVALID_SHARE", "Share images must be single-frame PNG/JPG of at least 1080 pixels per side.")
+        image.verify()
+    with Image.open(file) as image:
+        image.load()
+
+
+def decode_source_image(file):
+    """Decode a scene or material input image; it never reaches WeChat directly."""
+    from PIL import Image
+    if not file.is_file():
+        fail("INVALID_SHARE", "A scene or material image is missing.")
+    with Image.open(file) as image:
+        if getattr(image, "n_frames", 1) != 1:
+            fail("INVALID_SHARE", "Scene and material images must be single-frame images.")
+        image.verify()
+
+
+def validate_images_share(task_dir, result, title, source, workspace, manifest, input_data):
+    """Validate a multi-image share task and return its final image paths."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from share_images import validate_images_manifest
+    try:
+        normalized = validate_images_manifest(manifest, source=source, cached_content=input_data.get("cached_content"))
+    except ValueError:
+        fail("INVALID_SHARE", "Share manifest failed its multi-image contract.")
+    images = []
+    for image in normalized["images"]:
+        asset = contained(task_dir / image["file"], task_dir / "assets")
+        decode_share_image(asset)
+        images.append(asset)
+        for block in image["blocks"]:
+            if block["type"] in ("scene", "material"):
+                decode_source_image(contained(task_dir / block["path"], task_dir))
+    assets = task_dir / "assets"
+    if {item.name for item in assets.iterdir()} != {image.name for image in images}:
+        fail("INVALID_SHARE", "Assets must contain exactly the final share images.")
+    if normalized["title"] != title or normalized["source"] != source:
+        fail("INVALID_SHARE", "Share title or source does not match its validated input.")
+    relative = [image.relative_to(workspace).as_posix() for image in images]
+    caption_path = (task_dir / "caption.txt").relative_to(workspace).as_posix()
+    if result.get("article_type") != "newspic" or result.get("image_count") != len(images):
+        fail("INVALID_SHARE", "Share result image count does not match its manifest.")
+    if result.get("poster_path") != relative[0] or result.get("cover_path") != relative[0] or result.get("image_paths") != relative or result.get("caption_path") != caption_path or result.get("inline_image_paths") != []:
+        fail("INVALID_SHARE", "Share result paths do not match the validated images.")
+    return images
+
+
+def validate_legacy_share(task_dir, result, title, source, workspace, manifest, input_data):
+    """Validate the original single-poster manifest kept for resuming old tasks."""
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from share_editorial import validate_editorial
+    fields = {"title", "caption", "source", "headline", "subtitle", "poster"}
+    if set(manifest) - (fields | {"key_points", "editorial"}) or not fields.issubset(manifest) or any(not isinstance(manifest[key], str) or not manifest[key].strip() for key in fields):
+        fail("INVALID_SHARE", "Incomplete share manifest.")
+    if "poster_layout" in input_data and input_data["poster_layout"] not in ("content", "editorial"):
+        fail("INVALID_SHARE", "poster_layout must be content or editorial when provided.")
     validate_editorial(manifest.get("editorial"), required=input_data.get("poster_layout") == "editorial", present="editorial" in manifest)
     points = manifest.get("key_points")
     if "key_points" in manifest or input_data.get("poster_layout") == "content":
@@ -142,6 +183,7 @@ def validate_share(task_dir, result, title, source, workspace):
         fail("INVALID_SHARE", "Share result paths do not match fixed artifacts.")
     if list((task_dir / "assets").iterdir()) != [poster]:
         fail("INVALID_SHARE", "Exactly one final poster is required.")
+    from PIL import Image
     with Image.open(poster) as image:
         expected_format = "PNG" if poster.suffix == ".png" else "JPEG"
         if image.format != expected_format or image.width < 1080 or image.height < 1440 or image.width * 4 != image.height * 3 or getattr(image, "n_frames", 1) != 1:
@@ -149,6 +191,41 @@ def validate_share(task_dir, result, title, source, workspace):
         image.verify()
     with Image.open(poster) as image:
         image.load()
+    return [poster]
+
+
+def ensure_no_share_links(task_dir, workspace):
+    """Reject symlinks or junctions before a malformed task can look like a submission."""
+    ancestors = []
+    current = task_dir
+    while current != workspace:
+        ancestors.append(current)
+        current = current.parent
+    for item in (*ancestors, *task_dir.rglob("*")):
+        if item.is_symlink() or (hasattr(item, "is_junction") and item.is_junction()):
+            fail("INVALID_SHARE", "Share symbolic links and junctions are forbidden.")
+
+
+def validate_share(task_dir, result, title, source, workspace):
+    """Validate share paths and decode every pixel before any API call."""
+    parsed_source = urlsplit(source)
+    if parsed_source.scheme not in ("http", "https") or not parsed_source.hostname or parsed_source.username or parsed_source.password:
+        fail("INVALID_SHARE", "Invalid source URL.")
+    ancestors = []
+    current = task_dir
+    while current != workspace:
+        ancestors.append(current)
+        current = current.parent
+    for item in (*ancestors, *task_dir.rglob("*")):
+        if item.is_symlink() or (hasattr(item, "is_junction") and item.is_junction()):
+            fail("INVALID_SHARE", "Share symbolic links and junctions are forbidden.")
+    manifest = read_json(contained(task_dir / "share.json", task_dir))
+    input_data = read_json(contained(task_dir / "input.json", task_dir))
+    if not isinstance(manifest, dict):
+        fail("INVALID_SHARE", "Incomplete share manifest.")
+    if "images" in manifest:
+        return validate_images_share(task_dir, result, title, source, workspace, manifest, input_data)
+    return validate_legacy_share(task_dir, result, title, source, workspace, manifest, input_data)
 
 
 def run_bridge(task_dir, lock_token, title, digest, source, *, workspace=ROOT, module_loader=load_publisher):
@@ -181,11 +258,12 @@ def run_bridge(task_dir, lock_token, title, digest, source, *, workspace=ROOT, m
     if result.get("stage") != "wechat_draft" or result.get("status") != "running" or result.get("article_path") != expected_article or result.get("title") != title:
         fail("INVALID_STATE", "The RSS helper must validate the article before calling the bridge.")
     cover_value = result.get("cover_path")
-    if not isinstance(cover_value, str):
-        fail("INVALID_STATE", "Missing cover path.")
-    cover = contained(workspace / cover_value, task_dir / "assets")
-    if not re.fullmatch(r"01-" + ("poster" if mode == "rss-share" else "cover") + r"\.(?:png|jpg)", cover.name, re.I):
-        fail("INVALID_STATE", "The cover must be a fixed task PNG or JPG.")
+    if mode != "rss-share":
+        if not isinstance(cover_value, str):
+            fail("INVALID_STATE", "Missing cover path.")
+        cover = contained(workspace / cover_value, task_dir / "assets")
+        if not re.fullmatch(r"01-cover\.(?:png|jpg)", cover.name, re.I):
+            fail("INVALID_STATE", "The cover must be a fixed task PNG or JPG.")
 
     def finish(status, code=None, message=None, media_id=None):
         result.update(status=status, stage="wechat_draft", media_id=media_id,
@@ -194,12 +272,18 @@ def run_bridge(task_dir, lock_token, title, digest, source, *, workspace=ROOT, m
         atomic_result(result_path, result, task_dir)
         return result
 
+    # Link traversal is a structural path problem: raise it directly instead of
+    # reporting a submission failure. Content validation stays inside the
+    # suppressed block and becomes a structured failed result.
+    if mode == "rss-share":
+        ensure_no_share_links(task_dir, workspace)
+
     # Suppress import-time output and every original publisher print. Raw
     # exceptions are deliberately never stored, printed or interpolated.
     with open(os.devnull, "w", encoding="utf-8") as sink, redirect_stdout(sink), redirect_stderr(sink):
         try:
             if mode == "rss-share":
-                validate_share(task_dir, result, title, source, workspace)
+                share_images = validate_share(task_dir, result, title, source, workspace)
             publisher = module_loader()
             publisher.load_env_from_dotenv()
             app_id = os.environ.get("WECHAT_APP_ID")
@@ -210,7 +294,7 @@ def run_bridge(task_dir, lock_token, title, digest, source, *, workspace=ROOT, m
                 appid=app_id, secret=app_secret, title=title, digest=digest,
                 content=None, content_file=str(article), content_format="markdown",
                 style_preset="auto", author="Aide Hub", article_type="newspic" if mode == "rss-share" else "news",
-                cover_image=str(cover), thumb_media_id=None, content_source_url=source,
+                cover_image=None if mode == "rss-share" else str(cover), thumb_media_id=None, content_source_url=source,
                 ignore_image_errors=False, extra_css_file=None, image=[], image_dir=None,
                 delete_draft=None,
             )
@@ -219,7 +303,7 @@ def run_bridge(task_dir, lock_token, title, digest, source, *, workspace=ROOT, m
                 args.content_file = None
                 args.content_format = "auto"
                 args.cover_image = None
-                args.image = [str(cover)]
+                args.image = [str(image) for image in share_images]
             # Use the original argument constraints as well as the JS validator.
             publisher.validate_args(argparse.ArgumentParser(add_help=False), args)
             token = publisher.get_access_token(app_id, app_secret)
@@ -228,8 +312,8 @@ def run_bridge(task_dir, lock_token, title, digest, source, *, workspace=ROOT, m
             prepared = publisher.build_newspic_article(args, token) if mode == "rss-share" else publisher.build_news_article(args, token)
             valid = isinstance(prepared, dict)
             if valid and mode == "rss-share":
-                images = prepared.get("image_info", {}).get("image_list", [])
-                valid = prepared.get("article_type") == "newspic" and len(images) == 1 and bool(images[0].get("image_media_id"))
+                image_list = prepared.get("image_info", {}).get("image_list", [])
+                valid = prepared.get("article_type") == "newspic" and len(image_list) == len(share_images) and all(bool(item.get("image_media_id")) for item in image_list)
             elif valid:
                 valid = bool(prepared.get("thumb_media_id"))
             if not valid:

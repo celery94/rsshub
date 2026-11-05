@@ -89,7 +89,8 @@ def scene_crop(scene, box, focal=(0.5, 0.625)):
     return image, normalized
 
 
-def compose_editorial(scene, manifest, regular_font, bold_font):
+def compose_editorial(scene, manifest, regular_font, bold_font, *, focal=(0.5, 0.625)):
+    """Focal is the vertical crop center (0–1); the default keeps the lower-middle band."""
     editorial = validate_editorial(manifest.get('editorial'), required=True, present=True)
     layout = editorial['layout']
     steps = layout == 'steps'
@@ -190,7 +191,7 @@ def compose_editorial(scene, manifest, regular_font, bold_font):
     if len(sections)>1:
         gap+=min(28,spare//(len(sections)-1))
 
-    scenic,crop=scene_crop(scene,scene_box)
+    scenic,crop=scene_crop(scene,scene_box,focal)
     mask=Image.new('L',scenic.size,0)
     ImageDraw.Draw(mask).rounded_rectangle((0,0,scenic.width-1,scenic.height-1),radius=24,fill=255)
     canvas.paste(scenic,scene_box[:2],mask)

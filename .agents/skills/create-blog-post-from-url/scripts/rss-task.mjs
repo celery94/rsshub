@@ -203,8 +203,15 @@ export function createTaskRunner({ workspace = PROJECT_ROOT, environment = proce
       reject("INVALID_STATE", "Stored task state does not match its input or fixed paths.");
     }
     if (mode === "rss-share") {
-      const posters = ["png", "jpg"].map(ext => relative(path.join(files.assets, `01-poster.${ext}`)));
-      if (result.article_type !== "newspic" || result.image_count !== 1 || result.caption_path !== relative(files.article) || !Array.isArray(result.inline_image_paths) || result.inline_image_paths.length || result.poster_path !== result.cover_path || (result.poster_path !== null && !posters.includes(result.poster_path))) reject("INVALID_STATE", "Stored share result does not match fixed single-poster paths.");
+      const taskRel = relative(files.dir);
+      const imageRel = value => {
+        if (typeof value !== "string") return false;
+        const prefix = `${taskRel}/assets/`;
+        return value.startsWith(prefix) && /^(\d{2})-([a-z0-9][a-z0-9-]{0,23})\.(png|jpg)$/.test(value.slice(prefix.length));
+      };
+      const imagePaths = Array.isArray(result.image_paths) ? result.image_paths : null;
+      if (result.article_type !== "newspic" || !Number.isInteger(result.image_count) || result.image_count < 1 || result.image_count > 3 || result.caption_path !== relative(files.article) || !Array.isArray(result.inline_image_paths) || result.inline_image_paths.length || result.poster_path !== result.cover_path || (result.poster_path !== null && !imageRel(result.poster_path))) reject("INVALID_STATE", "Stored share result does not match its image paths.");
+      if (imagePaths && (imagePaths.length !== result.image_count || !imagePaths.every(imageRel) || imagePaths[0] !== result.poster_path)) reject("INVALID_STATE", "Stored share result image list is inconsistent.");
     }
     return { input, result };
   }
@@ -306,7 +313,7 @@ export function createTaskRunner({ workspace = PROJECT_ROOT, environment = proce
       catch (error) {
         return save(files, result, { status: "failed", error: { code: error instanceof TaskError ? error.code : "VALIDATION_FAILED", message: error instanceof TaskError ? error.message : "Article validation could not complete." } });
       }
-      result = save(files, result, { status: "running", stage: "wechat_draft", title: metadata.title, cover_path: relative(metadata.cover), inline_image_paths: metadata.inline.map(relative), ...(mode === "rss-share" ? {article_type:"newspic",image_count:1,caption_path:relative(files.article),poster_path:relative(metadata.cover)} : {}), media_id: null, error: null });
+      result = save(files, result, { status: "running", stage: "wechat_draft", title: metadata.title, cover_path: relative(metadata.cover), inline_image_paths: metadata.inline.map(relative), ...(mode === "rss-share" ? {article_type:"newspic",image_count:metadata.image_count,image_paths:metadata.images.map(relative),caption_path:relative(files.article),poster_path:relative(metadata.cover)} : {}), media_id: null, error: null });
       const request = { python, taskDir: files.dir, lockToken, ...metadata };
       let completion;
       try {

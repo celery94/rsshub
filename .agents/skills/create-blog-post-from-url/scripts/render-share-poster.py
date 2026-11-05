@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Compose one 1536×2048 HD-2D scene poster with deterministic local text.
 Generate the text-free base scene with Azure --skip-post-process; keep it outside assets.
-Usage: render-share-poster.py --scene scene.png --manifest TASK/share.json
+Usage: render-share-poster.py --scene scene.png --manifest TASK/share.json [--focal 0.625]
+       render-share-poster.py --check --manifest TASK/share.json
+--check fits the editorial text against a placeholder scene without writing the poster;
+--focal moves the band crop center (0–1) when a generated scene puts its subject off-center.
 """
 import argparse
 import json
@@ -110,7 +113,7 @@ def layout_points(draw, points, width=1160, height=500):
     raise ValueError('Content descriptions cannot fit at a readable font size without overflow.')
 
 
-def render(scene, manifest_path):
+def render(scene, manifest_path, *, focal=0.625, check=False):
     manifest_path = Path(manifest_path).absolute()
     manifest = json.loads(manifest_path.read_text(encoding='utf-8-sig'))
     fields = {'title', 'caption', 'source', 'headline', 'subtitle', 'poster'}
@@ -127,6 +130,8 @@ def render(scene, manifest_path):
             raise ValueError('poster_layout is only supported as content or editorial in rss-share mode.')
     points = validate_points(manifest.get('key_points'), task_input.get('poster_layout') == 'content', 'key_points' in manifest)
     editorial = validate_editorial(manifest.get('editorial'), required=task_input.get('poster_layout') == 'editorial', present='editorial' in manifest)
+    if check and not editorial:
+        raise ValueError('Check mode requires an editorial manifest; content posters are validated by validate-share.mjs.')
     for key, maximum in [('headline',24),('subtitle',40)]:
         value = manifest.get(key)
         if not isinstance(value,str) or not value.strip() or len(value) > maximum or any(c in value for c in '\r\n<>'):
@@ -134,22 +139,28 @@ def render(scene, manifest_path):
     if manifest.get('poster') not in ('./assets/01-poster.png','./assets/01-poster.jpg'):
         raise ValueError('Manifest must select ./assets/01-poster.png or .jpg.')
     output = manifest_path.parent / manifest['poster']
-    if Path(scene).resolve() == output.resolve():
-        raise ValueError('Raw scene and composed poster must use different paths.')
-    for item in (manifest_path, Path(scene).absolute(), output):
-        for ancestor in (item, *item.parents):
-            if ancestor.is_symlink() or (hasattr(ancestor, 'is_junction') and ancestor.is_junction()):
-                raise ValueError('Symbolic links and junctions are forbidden.')
-    with Image.open(scene) as image:
-        image.load()
-        if image.width < 1080 or image.height < 1440:
-            raise ValueError('Base scene must be at least 1080×1440; use Azure --skip-post-process.')
-        if editorial:
-            canvas, metadata = compose_editorial(image.convert('RGB'), manifest, local_font(), local_font(True))
-            output.parent.mkdir(parents=True,exist_ok=True)
-            canvas.save(output,quality=95)
-            return {'poster_path':str(output),'width':WIDTH,'height':HEIGHT,'editorial':metadata}
-        canvas = ImageOps.fit(image.convert('RGB'), (WIDTH, HEIGHT), method=Image.Resampling.LANCZOS)
+    if check:
+        scene_image = Image.new('RGB', (WIDTH, HEIGHT), (245, 241, 231))
+    else:
+        if Path(scene).resolve() == output.resolve():
+            raise ValueError('Raw scene and composed poster must use different paths.')
+        for item in (manifest_path, Path(scene).absolute(), output):
+            for ancestor in (item, *item.parents):
+                if ancestor.is_symlink() or (hasattr(ancestor, 'is_junction') and ancestor.is_junction()):
+                    raise ValueError('Symbolic links and junctions are forbidden.')
+        with Image.open(scene) as opened:
+            opened.load()
+            if opened.width < 1080 or opened.height < 1440:
+                raise ValueError('Base scene must be at least 1080×1440; use Azure --skip-post-process.')
+            scene_image = opened.convert('RGB')
+    if editorial:
+        canvas, metadata = compose_editorial(scene_image, manifest, local_font(), local_font(True), focal=(0.5, focal))
+        if check:
+            return {'check':True,'poster_path':None,'width':WIDTH,'height':HEIGHT,'focal':focal,'editorial':metadata}
+        output.parent.mkdir(parents=True,exist_ok=True)
+        canvas.save(output,quality=95)
+        return {'poster_path':str(output),'width':WIDTH,'height':HEIGHT,'editorial':metadata}
+    canvas = ImageOps.fit(scene_image, (WIDTH, HEIGHT), method=Image.Resampling.LANCZOS)
     draw = ImageDraw.Draw(canvas, 'RGBA')
     draw.rounded_rectangle((64,72,1472,540),radius=32,fill=(12,20,31,230))
     draw.rounded_rectangle((64,1880,1472,1980),radius=20,fill=(12,20,31,230))
@@ -187,13 +198,28 @@ def render(scene, manifest_path):
     return {'poster_path':str(output),'width':WIDTH,'height':HEIGHT}
 
 
+def focal_ratio(value):
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        raise argparse.ArgumentTypeError('focal must be a number between 0 and 1.')
+    if not 0 < number < 1:
+        raise argparse.ArgumentTypeError('focal must be a number between 0 and 1.')
+    return number
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--scene',required=True)
+    parser.add_argument('--scene',help='Text-free scene generated by Azure; omitted only with --check.')
     parser.add_argument('--manifest',required=True)
+    parser.add_argument('--focal',type=focal_ratio,default=0.625,help='Vertical crop center between 0 and 1; default 0.625.')
+    parser.add_argument('--check',action='store_true',help='Fit the editorial text only; do not write a poster.')
     args = parser.parse_args()
+    if not args.check and not args.scene:
+        print(json.dumps({'error':'--scene is required unless --check is used.'},ensure_ascii=True))
+        return 1
     try:
-        print(json.dumps(render(args.scene,args.manifest),ensure_ascii=True))
+        print(json.dumps(render(args.scene,args.manifest,focal=args.focal,check=args.check),ensure_ascii=True))
     except Exception as error:
         print(json.dumps({'error':str(error)},ensure_ascii=True))
         return 1

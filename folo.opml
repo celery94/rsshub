@@ -22,7 +22,6 @@
         <outline text="科学空间 · 苏剑林" title="科学空间 · 苏剑林" xmlUrl="https://kexue.fm/feed/" htmlUrl="https://kexue.fm/" type="rss" />
       </outline>
       <outline text="编程语言与软件工程" title="编程语言与软件工程">
-        <outline text="danielchasehooper.com" title="danielchasehooper.com" xmlUrl="https://danielchasehooper.com/feed.xml" htmlUrl="https://danielchasehooper.com/feed.xml" type="rss" />
         <outline text="idiallo.com" title="idiallo.com" xmlUrl="https://idiallo.com/feed.rss" htmlUrl="https://idiallo.com/" type="rss" />
         <outline text="refactoringenglish.com" title="refactoringenglish.com" xmlUrl="https://refactoringenglish.com/index.xml" htmlUrl="https://refactoringenglish.com/" type="rss" />
         <outline text="jyn.dev" title="jyn.dev" xmlUrl="https://jyn.dev/atom.xml" htmlUrl="https://jyn.dev/" type="rss" />
@@ -52,10 +51,8 @@
       </outline>
       <outline text="系统与云基础设施" title="系统与云基础设施">
         <outline text="maurycyz.com" title="maurycyz.com" xmlUrl="https://maurycyz.com/index.xml" htmlUrl="https://maurycyz.com/" type="rss" />
-        <outline text="utcc.utoronto.ca/~cks" title="utcc.utoronto.ca/~cks" xmlUrl="https://utcc.utoronto.ca/~cks/cspace-stub-feeds/cloud-source.atom" htmlUrl="https://utcc.utoronto.ca/~cks/cspace-bad/cspace-gen-http429.html" type="rss" />
         <outline text="jayd.ml" title="jayd.ml" xmlUrl="https://jayd.ml/feed.xml" htmlUrl="https://jayd.ml/" type="rss" />
         <outline text="it-notes.dragas.net" title="it-notes.dragas.net" xmlUrl="https://it-notes.dragas.net/feed/" htmlUrl="https://it-notes.dragas.net/" type="rss" />
-        <outline text="philiplaine.com" title="philiplaine.com" xmlUrl="https://philiplaine.com/index.xml" htmlUrl="https://philiplaine.com/" type="rss" />
         <outline text="xeiaso.net" title="xeiaso.net" xmlUrl="https://xeiaso.net/blog.rss" htmlUrl="https://xeiaso.net/" type="rss" />
         <outline text="michael.stapelberg.ch" title="michael.stapelberg.ch" xmlUrl="https://michael.stapelberg.ch/feed.xml" htmlUrl="https://michael.stapelberg.ch/" type="rss" />
         <outline text="mitchellh.com" title="mitchellh.com" xmlUrl="https://mitchellh.com/feed.xml" htmlUrl="https://mitchellh.com/" type="rss" />
@@ -78,7 +75,6 @@
         <outline text="devblogs.microsoft.com/oldnewthing" title="devblogs.microsoft.com/oldnewthing" xmlUrl="https://devblogs.microsoft.com/oldnewthing/feed/" htmlUrl="https://devblogs.microsoft.com/oldnewthing/" type="rss" />
         <outline text="Dev Leader" title="Dev Leader" xmlUrl="https://www.devleader.ca/feed.rss" htmlUrl="https://www.devleader.ca/" type="rss" />
         <outline text="Microsoft Developer Blogs" title="Microsoft Developer Blogs" xmlUrl="https://devblogs.microsoft.com/landingpage/" htmlUrl="https://devblogs.microsoft.com/" type="rss" />
-        <outline text="Code Maze" title="Code Maze" xmlUrl="https://code-maze.com/feed/" htmlUrl="https://code-maze.com/" type="rss" />
         <outline text="codewithmukesh" title="codewithmukesh" xmlUrl="https://codewithmukesh.com/rss.xml" htmlUrl="https://codewithmukesh.com/" type="rss" />
         <outline text="Milan's .NET Weekly" title="Milan's .NET Weekly" xmlUrl="https://milanjovanovic.tech/rss/feed.xml" htmlUrl="https://milanjovanovic.tech/" type="rss" />
         <outline text="Artech" title="Artech" xmlUrl="https://feed.cnblogs.com/blog/u/22886/rss/" htmlUrl="https://www.cnblogs.com/artech/" type="rss" />
@@ -88,7 +84,6 @@
         <outline text="dfarq.homeip.net" title="dfarq.homeip.net" xmlUrl="https://dfarq.homeip.net/feed/" htmlUrl="https://dfarq.homeip.net/" type="rss" />
         <outline text="ericmigi.com" title="ericmigi.com" xmlUrl="https://ericmigi.com/rss.xml" htmlUrl="http://github.com/dylang/node-rss" type="rss" />
         <outline text="oldvcr.blogspot.com" title="oldvcr.blogspot.com" xmlUrl="https://oldvcr.blogspot.com/feeds/posts/default" htmlUrl="https://oldvcr.blogspot.com/" type="rss" />
-        <outline text="bogdanthegeek.github.io" title="bogdanthegeek.github.io" xmlUrl="https://bogdanthegeek.github.io/blog/index.xml" htmlUrl="https://bogdanthegeek.github.io/blog/" type="rss" />
         <outline text="fabiensanglard.net" title="fabiensanglard.net" xmlUrl="https://fabiensanglard.net/rss.xml" htmlUrl="https://fabiensanglard.net/" type="rss" />
         <outline text="computer.rip" title="computer.rip" xmlUrl="https://computer.rip/rss.xml" htmlUrl="https://computer.rip/" type="rss" />
         <outline text="righto.com" title="righto.com" xmlUrl="https://www.righto.com/feeds/posts/default" htmlUrl="http://www.righto.com/" type="rss" />
@@ -105,10 +100,7 @@
       </outline>
       <outline text="产品设计与效率工具" title="产品设计与效率工具">
         <outline text="aresluna.org" title="aresluna.org" xmlUrl="https://aresluna.org/main.rss" htmlUrl="https://www.aresluna.org/" type="rss" />
-        <outline text="danielwirtz.com" title="danielwirtz.com" xmlUrl="https://danielwirtz.com/rss.xml" htmlUrl="https://danielwirtz.com/blog" type="rss" />
         <outline text="rakhim.exotext.com" title="rakhim.exotext.com" xmlUrl="https://rakhim.exotext.com/rss.xml" htmlUrl="https://rakhim.exotext.com/" type="rss" />
-        <outline text="danieldelaney.net" title="danieldelaney.net" xmlUrl="https://danieldelaney.net/feed" htmlUrl="https://danieldelaney.net/" type="rss" />
-        <outline text="skyfall.dev" title="skyfall.dev" xmlUrl="https://mahadk.com/rss.xml" htmlUrl="https://mahadk.com/" type="rss" />
         <outline text="blog.jim-nielsen.com" title="blog.jim-nielsen.com" xmlUrl="https://blog.jim-nielsen.com/feed.xml" htmlUrl="https://blog.jim-nielsen.com/" type="rss" />
         <outline text="daringfireball.net" title="daringfireball.net" xmlUrl="https://daringfireball.net/feeds/main" htmlUrl="https://daringfireball.net/" type="rss" />
         <outline text="少数派 -- Matrix" title="少数派 -- Matrix" xmlUrl="https://rsshub.app/sspai/matrix" htmlUrl="https://sspai.com/matrix" type="rss" />

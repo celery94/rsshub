@@ -163,5 +163,9 @@ class ShareTests(unittest.TestCase):
         self.write('share.json',{**self.manifest,'headline':'长'*25})
         with self.assertRaises(ValueError): RENDER.render(scene,self.task/'share.json')
 
+    def test_check_mode_requires_editorial_manifest(self):
+        with self.assertRaisesRegex(ValueError,'Check mode requires an editorial manifest'):
+            RENDER.render(None,self.task/'share.json',check=True)
+
 if __name__ == '__main__':
     unittest.main()
