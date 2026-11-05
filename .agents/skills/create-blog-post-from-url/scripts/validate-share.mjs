@@ -21,8 +21,8 @@ export function validateEditorial(value,required=false,present=value!==undefined
   if(!required && !present) return;
   editorialObject(value,['layout','sections'],['comparison']);
   if(!['comparison','insight','steps'].includes(value.layout)) throw new Error('Editorial layout must be comparison, insight or steps.');
-  if(!Array.isArray(value.sections) || value.sections.length<2 || value.sections.length>3) throw new Error('Editorial requires two or three sections.');
-  for(const section of value.sections){editorialObject(section,['heading','body']);editorialText(section.heading,1,12,true);editorialText(section.body,12,50,true);}
+  if(!Array.isArray(value.sections) || value.sections.length<2 || value.sections.length>5) throw new Error('Editorial requires two to five sections.');
+  for(const section of value.sections){editorialObject(section,['heading','body']);editorialText(section.heading,1,12,true);editorialText(section.body,12,80,true);}
   if(value.layout==='comparison'){
     const pair=value.comparison;editorialObject(pair,['label','left','right']);editorialText(pair.label,1,24);
     for(const side of ['left','right']){editorialObject(pair[side],['name','value','unit']);for(const [key,max] of [['name',12],['value',16],['unit',12]])editorialText(pair[side][key],1,max);}

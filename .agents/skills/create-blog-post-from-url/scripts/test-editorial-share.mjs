@@ -31,9 +31,9 @@ test('modern editorial required; legacy editorial optional and validated; conten
  modern.save({editorial:editorial('comparison'),key_points:['短','句']});assert.ok(validateShare(modern.dir).length);
 });
 test('editorial rejects missing, unknown, wrong-type and cross-layout fields',()=>{
- const invalid=[null,[],{},'comparison',{...editorial('insight'),layout:'unknown'},{...editorial('insight'),extra:true},{...editorial('insight'),sections:null},{...editorial('insight'),sections:[sections[0]]},{...editorial('insight'),sections:[...sections,...sections]},{...editorial('comparison'),comparison:null},{...editorial('comparison'),comparison:{...comparison,extra:true}},{...editorial('insight'),comparison},{...editorial('steps'),comparison}];
+ const invalid=[null,[],{},'comparison',{...editorial('insight'),layout:'unknown'},{...editorial('insight'),extra:true},{...editorial('insight'),sections:null},{...editorial('insight'),sections:[sections[0]]},{...editorial('insight'),sections:[...sections,...sections,...sections]},{...editorial('comparison'),comparison:null},{...editorial('comparison'),comparison:{...comparison,extra:true}},{...editorial('insight'),comparison},{...editorial('steps'),comparison}];
  for(const value of invalid)assert.throws(()=>validateEditorial(value));
- for(const bad of [{heading:'',body:sections[0].body},{heading:'长'.repeat(13),body:sections[0].body},{heading:'Heading',body:sections[0].body},{heading:'增长',body:'短句'},{heading:'增长',body:'文'.repeat(51)},{heading:'增长',body:'a'.repeat(20)},{heading:'增长',body:'**需要检查时间区间和预测口径**'},{...sections[0],extra:1},null])assert.throws(()=>validateEditorial({...editorial('insight'),sections:[bad,sections[1]]}));
+ for(const bad of [{heading:'',body:sections[0].body},{heading:'长'.repeat(13),body:sections[0].body},{heading:'Heading',body:sections[0].body},{heading:'增长',body:'短句'},{heading:'增长',body:'文'.repeat(81)},{heading:'增长',body:'a'.repeat(20)},{heading:'增长',body:'**需要检查时间区间和预测口径**'},{...sections[0],extra:1},null])assert.throws(()=>validateEditorial({...editorial('insight'),sections:[bad,sections[1]]}));
 });
 test('comparison keeps same units and bounded plain-text data fields',()=>{
  for(const [key,max] of [['name',12],['value',16],['unit',12]])for(const value of ['',null,{},'x'.repeat(max+1),'<b>bad</b>']){
@@ -42,6 +42,6 @@ test('comparison keeps same units and bounded plain-text data fields',()=>{
  for(const mutate of [pair=>pair.left.unit='亿元',pair=>pair.label='长'.repeat(25),pair=>pair.label='',pair=>pair.left.extra=true,pair=>delete pair.right.name]){const bad=editorial('comparison');mutate(bad.comparison);assert.throws(()=>validateEditorial(bad));}
 });
 test('maximum legal fields and Unicode codepoints accepted',()=>{
- const value=editorial('comparison');value.sections=Array.from({length:3},()=>({heading:'标'.repeat(12),body:'文'.repeat(49)+'𠮷'}));value.comparison.label='期'.repeat(24);for(const side of ['left','right'])value.comparison[side]={name:'名'.repeat(12),value:'1'.repeat(16),unit:'单'.repeat(12)};
+ const value=editorial('comparison');value.sections=Array.from({length:5},()=>({heading:'标'.repeat(12),body:'文'.repeat(79)+'𠮷'}));value.comparison.label='期'.repeat(24);for(const side of ['left','right'])value.comparison[side]={name:'名'.repeat(12),value:'1'.repeat(16),unit:'单'.repeat(12)};
  assert.doesNotThrow(()=>validateEditorial(value));value.sections[0].body+='𠮷';assert.throws(()=>validateEditorial(value));
 });

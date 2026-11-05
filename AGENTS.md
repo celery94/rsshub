@@ -55,7 +55,7 @@ There is no root package manifest or unified build command in this workspace.
 
 ## Verification
 
-Default to relevant unit tests. Do not start a service or open a page unless explicitly requested. Documentation-only changes need path/command checks and `git diff --check`; they do not require running application tests.
+Default to relevant unit tests. Use the existing Harness instance and Web GUI for plugin reloads and verification; do not launch a replacement service or browser. Documentation-only changes need path/command checks and `git diff --check`; they do not require running application tests. The end-of-turn plugin reload below still applies.
 
 Run commands from the repository root. Select the affected test file or suite:
 
@@ -73,4 +73,11 @@ git diff --check
 
 Python scripts have workflow-specific dependencies documented in their skills; do not assume a shared root dependency manifest. Report missing dependencies or unrun checks explicitly. For content tasks, also run the validators prescribed by the selected workflow before publishing.
 
-For plugin implementation changes, select relevant offline checks from the plugin's `README.md` and run them from `D:/Projects/repos/dsh-plugins/rss-brief`. For example, `node scripts/publication-check.mjs` checks article-task integration and `node scripts/share-check.mjs` checks share-task integration using temporary files and simulated services. These are separate from the workspace helper unit tests above. Do not launch Harness, restart the plugin, or run browser/service checks unless explicitly requested.
+For plugin implementation changes, select relevant offline checks from the plugin's `README.md` and run them from `D:/Projects/repos/dsh-plugins/rss-brief`. For example, `node scripts/publication-check.mjs` checks article-task integration and `node scripts/share-check.mjs` checks share-task integration using temporary files and simulated services. These are separate from the workspace helper unit tests above.
+
+### End-of-turn plugin reload
+
+- At the end of every completed turn in this workspace, reload the installed `@local/dsh-rss-brief` plugin before the final response, including documentation-only turns. This is standing user authorization; do not request confirmation again.
+- Use `plugin_manager` to obtain the installed bundle identifier, disable that bundle, then enable it again. Check both results and confirm `application: applied`; if reactivation fails, diagnose and restore the enabled state before finishing when possible, and report any unresolved failure.
+- After Client UI changes, refresh the existing Harness Web GUI so it loads the updated Client code. Verify the affected interaction in that existing page when browser control is available; do not start a replacement Harness or Web server.
+- Complete relevant checks before reloading. In the final response, distinguish a successful live reload from code changes that could not be activated or visually verified.

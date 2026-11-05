@@ -101,65 +101,55 @@ def compose_editorial(scene, manifest, regular_font, bold_font):
             paint(side+'_name',metric['name'],(x,602+offset,x+624,664+offset),target=48,minimum=44,max_lines=1,bold=True)
             paint(side+'_value',metric['value'],(x,674+offset,x+624,822+offset),target=132,minimum=64,max_lines=2,bold=True,color=NAVY if side=='left' else '#9B691A',leading=1.12,break_words=True)
             paint(side+'_unit',metric['unit'],(x,842+offset,x+624,898+offset),target=44,minimum=42,max_lines=1,color=MUTED)
-        scene_box=(96,930+offset,1440,1330+offset)
-        section_box=(96,1362+offset,1440,1930)
+        scene_box=(96,926+offset,1440,1186+offset)
+        section_box=(96,1216+offset,1440,1930)
     elif layout=='insight':
-        scene_box=(96,header_bottom+40,1440,header_bottom+670)
-        section_box=(96,header_bottom+712,1440,1930)
+        scene_box=(96,header_bottom+36,1440,header_bottom+436)
+        section_box=(96,header_bottom+468,1440,1930)
     else:
-        scene_box=(1040,header_bottom+44,1440,1924)
-        section_box=(96,header_bottom+76,980,1910)
+        scene_box=(1100,header_bottom+44,1440,1924)
+        section_box=(96,header_bottom+60,1060,1920)
 
+    # Dense infographic: one shared body size, chosen as large as the content allows.
     sections=editorial['sections']
-    if layout in ('comparison','insight'):
-        font=ImageFont.truetype(str(regular_font),48)
+    width=section_box[2]-section_box[0]
+    available=section_box[3]-section_box[1]
+    heading_step,gap=(58,22) if layout!='steps' else (64,30)
+    chosen,wrapped=None,None
+    for size in range(44,33,-1):
+        font=ImageFont.truetype(str(regular_font),size)
         try:
-            required=sum(61+len(wrap_editorial(draw,s['body'],font,1344))*60 for s in sections)+24*(len(sections)-1)+40
+            wrapped=[wrap_editorial(draw,s['body'],font,width-(0 if layout!='steps' else 96)) for s in sections]
         except ValueError:
-            required=section_box[3]-section_box[1]
-        extra=min(400,max(0,section_box[3]-section_box[1]-required))
+            continue
+        need=sum(heading_step+len(lines)*int(size*1.3) for lines in wrapped)+gap*(len(sections)-1)
+        if all(len(lines)<=3 for lines in wrapped) and need<=available:
+            chosen=size
+            break
+    if chosen is None:
+        raise ValueError('Editorial sections cannot fit at 34 px or larger; shorten them.')
+    body_size=chosen
+    if layout!='steps':
+        # Spare room goes back to the illustration instead of leaving blank space.
+        extra=min(420,max(0,available-need))
         scene_box=(*scene_box[:3],scene_box[3]+extra)
         section_box=(section_box[0],section_box[1]+extra,section_box[2],section_box[3])
     scenic,crop=scene_crop(scene,scene_box)
     canvas.paste(scenic,scene_box[:2])
-    body_size=None
-    if layout in ('comparison','insight'):
-        # All body descriptions share one size; no per-row visual inconsistency.
-        available=section_box[3]-section_box[1]
-        chosen=None
-        for size in range(48,41,-1):
-            font=ImageFont.truetype(str(regular_font),size)
-            try:
-                wrapped=[wrap_editorial(draw,s['body'],font,section_box[2]-section_box[0]) for s in sections]
-            except ValueError:
-                continue
-            heights=[55+6+len(lines)*int(size*1.25) for lines in wrapped]
-            if all(len(lines)<=2 for lines in wrapped) and sum(heights)+12*(len(sections)-1)<=available:
-                chosen=size
-                break
-        if chosen is None:
-            raise ValueError('Editorial sections cannot fit at 42 px or larger.')
-        body_size=chosen
-        cursor=section_box[1]
-        for index,section in enumerate(sections):
-            paint('section_heading',section['heading'],(96,cursor,1440,cursor+55),target=44,minimum=44,max_lines=1,bold=True)
-            cursor+=61
-            _,used=paint('section_body',section['body'],(96,cursor,1440,cursor+2*int(chosen*1.25)),target=chosen,minimum=chosen,max_lines=2)
-            cursor+=used+12
-        if cursor-12>section_box[3]:
-            raise ValueError('Editorial sections exceed the reading area.')
-    else:
-        # Numbers convey order only in the process layout.
-        cursor=section_box[1]
-        for index,section in enumerate(sections):
-            paint('step_number',str(index+1),(96,cursor,194,cursor+110),target=84,minimum=72,max_lines=1,bold=True,color='#9B691A')
-            paint('section_heading',section['heading'],(218,cursor+6,980,cursor+72),target=52,minimum=48,max_lines=1,bold=True)
-            _,used=paint('section_body',section['body'],(218,cursor+90,980,cursor+350),target=48,minimum=42,max_lines=4)
-            body_size=min(body_size or 48,regions[-1]['font_size'])
-            cursor+=max(330,90+used+36)
-        if cursor-36>section_box[3]:
-            raise ValueError('Editorial steps exceed the reading area.')
-
+    cursor=section_box[1]
+    for index,section in enumerate(sections):
+        x=section_box[0]
+        if layout=='steps':
+            paint('step_number',str(index+1),(x,cursor-4,x+80,cursor+76),target=64,minimum=56,max_lines=1,bold=True,color='#9B691A')
+            x+=96
+        else:
+            draw.rectangle((x-28,cursor+12,x-20,cursor+44),fill=AMBER)
+        paint('section_heading',section['heading'],(x,cursor,section_box[2],cursor+heading_step-6),target=42,minimum=38,max_lines=1,bold=True)
+        cursor+=heading_step
+        _,used=paint('section_body',section['body'],(x,cursor,section_box[2],cursor+3*int(chosen*1.3)),target=chosen,minimum=chosen,max_lines=3,leading=1.3)
+        cursor+=used+gap
+    if cursor-gap>section_box[3]:
+        raise ValueError('Editorial sections exceed the reading area.')
     source=urlsplit(manifest['source'])
     if source.scheme not in ('http','https') or not source.hostname or source.username or source.password:
         raise ValueError('Editorial source must be an HTTP(S) URL without credentials.')

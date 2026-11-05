@@ -143,10 +143,10 @@ class EditorialTests(unittest.TestCase):
         self.assertEqual(self.f.run_bridge()['status'],'succeeded')
 
     def test_strict_invalid_editorial_never_reaches_upload(self):
-        bad_values=[None,{},[],{'layout':'unknown','sections':SECTIONS},{**editorial('insight'),'extra':1},{**editorial('insight'),'comparison':COMPARISON},{**editorial('steps'),'comparison':COMPARISON},{**editorial('comparison'),'comparison':None},{**editorial('insight'),'sections':SECTIONS[:1]},{**editorial('insight'),'sections':SECTIONS+[SECTIONS[0]]}]
+        bad_values=[None,{},[],{'layout':'unknown','sections':SECTIONS},{**editorial('insight'),'extra':1},{**editorial('insight'),'comparison':COMPARISON},{**editorial('steps'),'comparison':COMPARISON},{**editorial('comparison'),'comparison':None},{**editorial('insight'),'sections':SECTIONS[:1]},{**editorial('insight'),'sections':SECTIONS*2}]
         pair=editorial('comparison');pair['comparison']['right']['unit']='亿元';bad_values.append(pair)
         pair=editorial('comparison');pair['comparison']['left']['extra']=1;bad_values.append(pair)
-        for field,value in [('heading','标'*13),('heading','English'),('body','短句'),('body','文'*51),('body','<b>这段文字包含不允许使用的标签</b>')]:
+        for field,value in [('heading','标'*13),('heading','English'),('body','短句'),('body','文'*81),('body','<b>这段文字包含不允许使用的标签</b>')]:
             bad=editorial('insight');bad['sections'][0][field]=value;bad_values.append(bad)
         for bad in bad_values:
             with self.subTest(bad=bad):

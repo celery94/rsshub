@@ -24,12 +24,12 @@ def validate_editorial(editorial, *, required=False, present=False):
     if layout not in LAYOUTS:
         raise ValueError('Editorial layout must be comparison, insight or steps.')
     sections = editorial['sections']
-    if not isinstance(sections, list) or not 2 <= len(sections) <= 3:
-        raise ValueError('Editorial requires two or three sections.')
+    if not isinstance(sections, list) or not 2 <= len(sections) <= 5:
+        raise ValueError('Editorial requires two to five sections.')
     for section in sections:
         exact_object(section, ('heading', 'body'))
         plain(section['heading'], 1, 12, chinese=True)
-        plain(section['body'], 12, 50, chinese=True)
+        plain(section['body'], 12, 80, chinese=True)
     if layout == 'comparison':
         comparison = editorial.get('comparison')
         exact_object(comparison, ('label', 'left', 'right'))
