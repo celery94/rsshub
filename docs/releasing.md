@@ -31,11 +31,11 @@ npm run package:check
 
 ## GitHub 自动化
 
-- `check.yml`：在 PR 及 main/master 提交上运行 Windows/Linux、Node 24/26 的检查、Python 测试和干净安装验证。
-- `release.yml`：推送 `v<version>` 标签后运行同样的测试，要求标签与包版本一致，生成 tarball、SHA-256 和 CI artifact，随后创建附带这些文件的 **draft Release**。
+- 仓库仅保留 `release.yml`，不在普通分支推送或 PR 上运行 Check 工作流。
+- 推送 `v<version>` 标签后，在 Ubuntu、Node 26、Python 3.13 上执行检查和测试；要求标签与包版本一致，生成 tarball、SHA-256 和 CI artifact，随后创建附带这些文件的 **draft Release**。
 - 维护者核对草稿后，在 GitHub 完成正式发布。工作流不调用 npm publish。
 
-本次迁移只添加工作流文件，未提交、推送、创建远端标签或 Release，未实际运行 GitHub Actions。
+Release 工作流创建草稿，不直接公开发布，也不调用 npm publish。标签由维护者显式创建并推送。
 
 ## 安装与升级
 
