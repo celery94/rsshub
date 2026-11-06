@@ -1,11 +1,11 @@
 ---
 name: wechat-draft
-description: 将图文文章或图片消息发布到微信公众号草稿箱。当用户想把文章、博客内容、Markdown 或一组图片推送到微信公众号草稿箱时使用此技能，尤其是在用户提到"发布到微信"、"推送到公众号"、"推上草稿箱"、"发到微信草稿"、"图片消息"、"newspic"等场景下应主动触发，即使用户没有明确说"草稿箱"也要触发。需要 app_id 和 app_secret，或者从环境变量中读取。
+description: 将图文文章或图片消息保存到微信公众号草稿箱，仅创建草稿，不提交发布。当用户想把文章、博客内容、Markdown 或一组图片推送到微信公众号草稿箱时使用此技能，尤其是在用户提到"发布到微信"、"推送到公众号"、"推上草稿箱"、"发到微信草稿"、"图片消息"、"newspic"等场景下应主动触发，即使用户没有明确说"草稿箱"也要触发。需要 app_id 和 app_secret，或者从环境变量中读取。
 ---
 
-# 微信公众号草稿箱发布技能
+# 微信公众号草稿箱技能
 
-本技能通过微信公众平台服务端 API，将指定文章（Markdown 或 HTML）或图片消息（`newspic`）自动发布到微信公众号草稿箱中。
+本技能通过微信公众平台服务端 API，将指定文章（Markdown 或 HTML）或图片消息（`newspic`）保存到微信公众号草稿箱。仅支持创建草稿和删除已有草稿，不提交发布。
 默认支持两类草稿：
 
 - `news`：标准图文草稿。Markdown 会先转换为适合公众号发布的 HTML，并将样式内联到最终内容中。
@@ -17,7 +17,7 @@ description: 将图文文章或图片消息发布到微信公众号草稿箱。�
 2. **获取 access_token**
 3. **按草稿类型准备素材**
 4. **调用新增草稿接口**，将图文或图片消息保存到草稿箱
-5. **向用户报告结果**，包括返回的 `media_id`
+5. **向用户报告结果**，包括实际返回的 `media_id`、草稿类型和“已保存草稿”
 
 ### `news` 图文草稿流程
 
@@ -54,13 +54,14 @@ description: 将图文文章或图片消息发布到微信公众号草稿箱。�
 | `extra_css_file` | 额外 CSS 文件路径，会继续内联到最终 HTML 中 | 可选 |
 | `image` | 图片消息图片路径，可重复传入 | `newspic` 模式使用 |
 | `image_dir` | 图片消息目录，按文件名顺序收集图片 | `newspic` 模式使用 |
-| `ignore_image_errors` | 正文图片上传失败时继续发布（不推荐，草稿内图片会缺失） | 可选，默认失败即中止 |
+| `ignore_image_errors` | 正文图片上传失败时继续创建草稿（不推荐，草稿内图片会缺失） | 可选，默认失败即中止 |
 | `delete_draft` | 直接删除指定 `media_id` 的草稿并退出，无需其他内容参数 | 可选 |
 
 **安全提示**：app_id 和 app_secret 属于敏感凭据，优先从环境变量读取，避免明文出现在命令行日志中。建议用户设置 `WECHAT_APP_ID` 和 `WECHAT_APP_SECRET`，并可通过 `.env` 文件统一加载。
 
 ### 参数约束
 
+- 以下内容和素材约束适用于创建草稿；`--delete-draft MEDIA_ID` 不需要这些参数
 - `news` 模式必须提供 `content` 或 `content_file`
 - `news` 模式必须提供 `cover_image` 或永久素材 `thumb_media_id`
 - 所有文章标题最多 32 个字符
@@ -69,8 +70,8 @@ description: 将图文文章或图片消息发布到微信公众号草稿箱。�
 - `newspic` 模式不使用 `cover_image` / `thumb_media_id`，因为首张图片就是封面图
 - `newspic` 模式若未显式提供 `content`，脚本会回退使用 `digest`，再回退到 `title`
 - `newspic` 模式会校验标题长度，超过 32 个字符时直接报错
-- 封面图与正文图片如果是 `webp`/`gif`/`bmp`/`tiff` 格式，脚本会用 Pillow 自动转换为 `jpg` 后上传（微信只接受 jpg/png）；未安装 Pillow 或转换失败时直接报错，不会带着坏图继续发布
-- `news` 模式正文图片上传失败默认**中止发布**并报错，避免产出图片缺失的坏草稿；确需强发时使用 `--ignore-image-errors`
+- 封面图与正文图片如果是 `webp`/`gif`/`bmp`/`tiff` 格式，脚本会用 Pillow 自动转换为 `jpg` 后上传（微信只接受 jpg/png）；未安装 Pillow 或转换失败时直接报错，不会带着坏图继续创建草稿
+- `news` 模式正文图片上传失败默认**中止创建草稿**并报错，避免产出图片缺失的坏草稿；确需跳过时使用 `--ignore-image-errors`
 - `--delete-draft MEDIA_ID` 用于清理重复或失败的草稿，删除后可从草稿箱列表确认
 
 ## 执行步骤
@@ -108,7 +109,7 @@ description: 将图文文章或图片消息发布到微信公众号草稿箱。�
 
 > **凭证提示**：如果项目根目录或父目录已有 `.env` 文件且配置了 `WECHAT_APP_ID` / `WECHAT_APP_SECRET`，脚本会自动从 `.env` 加载，此时可以省略 `--appid` 和 `--secret` 参数。当 agent 在混合 shell 环境（如 Windows 下的 bash）中运行时，**推荐省略这两个参数**，避免因 `%VAR%` vs `$VAR` 语法差异导致传入字面字符串而非实际值。
 
-#### 发布 `news` 图文草稿
+#### 保存 `news` 图文草稿
 
 **省略凭证的推荐写法**（.env 已配置时）：
 
@@ -157,7 +158,7 @@ python <skill-dir>/scripts/publish_draft.py \
   --thumb-media-id "已有的永久素材media_id"
 ```
 
-#### 发布 `newspic` 图片消息草稿
+#### 保存 `newspic` 图片消息草稿
 
 （.env 已配置时可省略 --appid/--secret）
 
@@ -186,9 +187,11 @@ python <skill-dir>/scripts/publish_draft.py \
 4. `news` 模式下，扫描正文中的本地图片，调用 `https://api.weixin.qq.com/cgi-bin/media/uploadimg` 上传并替换链接
 5. `newspic` 模式下，调用 `https://api.weixin.qq.com/cgi-bin/material/add_material?type=image` 上传图片，得到 `image_media_id`
 6. 调用 `https://api.weixin.qq.com/cgi-bin/draft/add` 新增草稿
-7. 输出结果 JSON（含 `media_id`、`article_type`，图片消息还会返回 `image_count`）
+7. 输出结果 JSON（含实际返回的 `media_id`、`article_type` 和 `image_count`），表示草稿已保存；不新增发布相关字段
 
-清理草稿：
+RSS 任务仍须使用 `rss-task.mjs publish` 保存草稿，不能用独立命令绕过任务状态保护。该命令名为兼容保留，仅保存草稿。
+
+#### 清理已有草稿
 
 ```bash
 python <skill-dir>/scripts/publish_draft.py --delete-draft "MEDIA_ID"
@@ -196,12 +199,15 @@ python <skill-dir>/scripts/publish_draft.py --delete-draft "MEDIA_ID"
 
 ### Step 5：反馈结果
 
-成功后向用户展示：
-- 草稿的 `media_id`（用于后续查询或发布）
+按实际响应向用户展示：
+
+- 草稿的 `media_id`（用于后续核对）
+- 报告“草稿已保存，未提交发布”；仅以实际返回的非空 `media_id` 确认保存成功
 - `article_type`（`news` 或 `newspic`）
 - 若为 `newspic`，补充本次提交的图片数量
 - 说明 Markdown 已被转换为带内联样式的 HTML（如果输入是 `news` 且输入是 Markdown）
-- 提醒用户在微信公众平台后台检查草稿箱并最终发布
+
+创建草稿失败时报告实际失败原因；超时、断连、响应无法解析或中断时说明结果未知，不自动重新创建。保留已获得的 `media_id`，恢复前先核对微信后台和已有任务结果；复用已有成功结果。历史发布字段仅作为只读记录保留，不迁移、清理或补发。
 
 ## 常见错误处理
 

@@ -170,6 +170,8 @@ test("real validator is called with RSS and WeChat modes before offline success"
   const succeeded = await f.runner.publish(input().task_id, "offline-python");
   assert.equal(succeeded.status, "succeeded");
   assert.equal(succeeded.media_id, "offline-media");
+  assert.equal(Object.hasOwn(succeeded, "publish_id"), false);
+  assert.equal(Object.hasOwn(succeeded, "publish_status"), false);
   assert.equal(succeeded.title, "离线任务验证");
   assert.equal(succeeded.cover_path, "output/rss-articles/offline_task-1/assets/01-cover.png");
   assert.deepEqual(succeeded.inline_image_paths, ["output/rss-articles/offline_task-1/assets/02-illustration-topic.png"]);
@@ -243,7 +245,68 @@ for (const failure of ["throw", "exit", "signal", "empty-media", "missing-outcom
   assert.equal(calls, 1);
 });
 
-test("durably stored successful media_id survives a later abnormal bridge exit", async t => {
+for (const failure of ["throw", "exit", "signal"]) test(`historical draft checkpoint survives bridge ${failure} and blocks recreation`, async t => {
+  let calls = 0;
+  const f = fixture(t, { runBridge: () => {
+    calls++;
+    f.update({ media_id: "durable-draft", publish_status: "unknown" });
+    if (failure === "throw") throw Error("DO_NOT_LEAK");
+    return failure === "exit" ? { status: 1 } : { status: null, signal: "SIGTERM" };
+  } });
+  await f.runner.init(f.file); f.article();
+  const result = await f.runner.publish(input().task_id, "offline-python");
+  assert.equal(result.status, "needs_attention");
+  assert.equal(result.stage, "wechat_draft");
+  assert.equal(result.media_id, "durable-draft");
+  assert.equal(result.publish_status, "unknown");
+  assert.equal(result.error.code, "WECHAT_SUBMISSION_UNKNOWN");
+  assert.ok(!JSON.stringify(result).includes("DO_NOT_LEAK"));
+  assert.deepEqual(await f.runner.publish(input().task_id, "offline-python"), result);
+  assert.deepEqual(await f.runner.stage(input().task_id, "writing"), result);
+  assert.deepEqual(await f.runner.fail(input().task_id, "RESET", "retry"), result);
+  assert.deepEqual(await f.runner.init(f.file), result);
+  assert.equal(calls, 1);
+});
+
+for (const status of ["running", "failed", "needs_attention"]) test(`persisted draft blocks ${status} even outside wechat_draft`, async t => {
+  const f = fixture(t);
+  await f.runner.init(f.file);
+  f.update({ status, stage: "writing", media_id: "existing-draft", error: { code: "WECHAT_API_REJECTED", message: "old safe code" } });
+  const stored = f.state();
+  const result = await f.runner.publish(input().task_id, "offline-python");
+  assert.equal(result.media_id, "existing-draft");
+  assert.equal(result.status, "needs_attention");
+  if (status === "needs_attention") assert.deepEqual(result, stored);
+  else {
+    assert.equal(result.stage, "wechat_draft");
+    assert.equal(result.error.code, "WECHAT_SUBMISSION_UNKNOWN");
+  }
+  assert.equal(Object.hasOwn(result, "publish_status"), false);
+  assert.deepEqual(await f.runner.init(f.file), result);
+  assert.deepEqual(await f.runner.stage(input().task_id, "images"), result);
+  assert.deepEqual(await f.runner.fail(input().task_id, "RESET", "retry"), result);
+});
+
+for (const publishStatus of ["rejected", "unknown"]) test(`publication ${publishStatus} is retained despite abnormal child exit`, async t => {
+  let calls = 0;
+  const f = fixture(t, { runBridge: () => {
+    calls++;
+    f.update({ status: "needs_attention", media_id: "retained-draft", publish_status: publishStatus,
+      error: { code: publishStatus === "rejected" ? "WECHAT_PUBLISH_REJECTED" : "WECHAT_PUBLISH_UNKNOWN", message: "Inspect manually" } });
+    return { status: 1 };
+  } });
+  await f.runner.init(f.file); f.article();
+  const result = await f.runner.publish(input().task_id, "offline-python");
+  assert.equal(result.publish_status, publishStatus);
+  assert.equal(result.media_id, "retained-draft");
+  assert.deepEqual(await f.runner.publish(input().task_id, "offline-python"), result);
+  assert.deepEqual(await f.runner.stage(input().task_id, "writing"), result);
+  assert.deepEqual(await f.runner.fail(input().task_id, "RESET", "retry"), result);
+  assert.deepEqual(await f.runner.init(f.file), result);
+  assert.equal(calls, 1);
+});
+
+test("legacy success without publish_id survives abnormal exit and is never backfilled", async t => {
   let calls = 0;
   const f = fixture(t, { runBridge: () => {
     calls++;

@@ -44,6 +44,7 @@ class BridgeTests(unittest.TestCase):
             get_access_token=Mock(return_value="fake-token"),
             build_news_article=Mock(return_value={"article_type": "news", "thumb_media_id": "offline-thumb", "content": "<p>offline</p>"}),
             add_draft=Mock(return_value="offline-media-id"),
+            submit_publish=Mock(side_effect=AssertionError("Publication must never be called")),
         )
         self.environment = patch.dict(os.environ, {"WECHAT_APP_ID": "configured-app", "WECHAT_APP_SECRET": "configured-secret"}, clear=True)
         self.environment.start()
@@ -74,6 +75,10 @@ class BridgeTests(unittest.TestCase):
         result = self.run_bridge()
         self.assert_outcome(result, "succeeded")
         self.assertEqual(result["media_id"], "offline-media-id")
+        self.assertNotIn("publish_id", result)
+        self.assertNotIn("publish_status", result)
+        self.assertNotIn("msg_data_id", result)
+        self.publisher.submit_publish.assert_not_called()
         self.publisher.load_env_from_dotenv.assert_called_once_with()
         self.publisher.get_access_token.assert_called_once_with("configured-app", "configured-secret")
         args, token = self.publisher.build_news_article.call_args.args
@@ -91,6 +96,46 @@ class BridgeTests(unittest.TestCase):
         self.publisher.add_draft.assert_called_once()
         self.assertEqual(self.run_bridge(), result)
         self.publisher.add_draft.assert_called_once()
+
+    def test_draft_save_needs_no_publication_function(self):
+        del self.publisher.submit_publish
+        result = self.run_bridge()
+        self.assert_outcome(result, "succeeded")
+        self.assertEqual(result["media_id"], "offline-media-id")
+        self.assertEqual(self.run_bridge(), result)
+        self.publisher.add_draft.assert_called_once()
+
+    def test_historical_publication_results_remain_unchanged_without_api_calls(self):
+        for status, publication in (("succeeded", "submitted"), ("needs_attention", "rejected"), ("needs_attention", "unknown")):
+            with self.subTest(status=status, publication=publication):
+                stored = {**self.result, "status": status, "media_id": "existing-media",
+                          "publish_status": publication, "publish_id": "historical-job",
+                          "error": None if status == "succeeded" else {"code": "WECHAT_PUBLISH_REJECTED", "message": "historical error"}}
+                self.write_json("result.json", stored)
+                before = (self.task / "result.json").read_bytes()
+                self.assertEqual(self.run_bridge(), stored)
+                self.assertEqual((self.task / "result.json").read_bytes(), before)
+        self.publisher.load_env_from_dotenv.assert_not_called()
+        self.publisher.add_draft.assert_not_called()
+        self.publisher.submit_publish.assert_not_called()
+
+    def test_every_persisted_draft_blocks_recreation(self):
+        for status in ("running", "failed", "needs_attention", "succeeded"):
+            with self.subTest(status=status):
+                stored = {**self.result, "status": status, "stage": "writing", "media_id": "existing-media",
+                          "error": {"code": "WECHAT_API_REJECTED", "message": "old state"}}
+                self.write_json("result.json", stored)
+                result = self.run_bridge()
+                if status in ("succeeded", "needs_attention"):
+                    self.assertEqual(result, stored)
+                else:
+                    self.assert_outcome(result, "needs_attention", "WECHAT_SUBMISSION_UNKNOWN")
+                self.assertEqual(result["media_id"], "existing-media")
+                self.assertNotIn("publish_id", result)
+                self.assertNotIn("publish_status", result)
+        self.publisher.load_env_from_dotenv.assert_not_called()
+        self.publisher.add_draft.assert_not_called()
+        self.publisher.submit_publish.assert_not_called()
 
     def test_success_requires_nonempty_string_media_id(self):
         for value in (None, "", "  ", 42, {}, []):
@@ -222,7 +267,7 @@ class BridgeTests(unittest.TestCase):
         self.assertEqual(caught.exception.code, "PATH_ESCAPE")
         self.publisher.add_draft.assert_not_called()
 
-    def test_atomic_write_failure_after_submission_does_not_report_success(self):
+    def test_draft_result_write_failure_leaves_uncertain_state_for_parent(self):
         with patch.object(BRIDGE.os, "replace", side_effect=OSError(SECRET_TEXT)):
             with self.assertRaises(OSError):
                 self.run_bridge()
@@ -232,6 +277,7 @@ class BridgeTests(unittest.TestCase):
         self.assertEqual(self.saved()["stage"], "wechat_draft")
         self.assertFalse(list(self.task.glob("*.tmp")))
         self.publisher.add_draft.assert_called_once()
+        self.publisher.submit_publish.assert_not_called()
 
 
 if __name__ == "__main__":

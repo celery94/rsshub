@@ -41,7 +41,7 @@ class ShareTests(unittest.TestCase):
         self.result = dict(**data,status='running',stage='wechat_draft',title='中文标题',article_type='newspic',image_count=1,article_path='output/rss-shares/share-1/caption.txt',caption_path='output/rss-shares/share-1/caption.txt',cover_path='output/rss-shares/share-1/assets/01-poster.png',poster_path='output/rss-shares/share-1/assets/01-poster.png',inline_image_paths=[],media_id=None,error=None)
         self.write('result.json',self.result)
         self.write('.lock',dict(token='offline-lock'))
-        self.publisher = SimpleNamespace(load_env_from_dotenv=Mock(),validate_args=Mock(),get_access_token=Mock(return_value='offline-token'),build_news_article=Mock(),build_newspic_article=Mock(return_value={'article_type':'newspic','image_info':{'image_list':[{'image_media_id':'offline-image'}]}}),add_draft=Mock(return_value='offline-media'))
+        self.publisher = SimpleNamespace(load_env_from_dotenv=Mock(),validate_args=Mock(),get_access_token=Mock(return_value='offline-token'),build_news_article=Mock(),build_newspic_article=Mock(return_value={'article_type':'newspic','image_info':{'image_list':[{'image_media_id':'offline-image'}]}}),add_draft=Mock(return_value='offline-media'),submit_publish=Mock(side_effect=AssertionError('Publication must never be called')))
         env = patch.dict(os.environ,dict(WECHAT_APP_ID='configured-app',WECHAT_APP_SECRET='configured-secret'),clear=True)
         env.start(); self.addCleanup(env.stop)
 
@@ -60,6 +60,10 @@ class ShareTests(unittest.TestCase):
     def test_success_uses_single_image_newspic_and_exact_caption(self):
         result = self.run_bridge()
         self.assertEqual(result['status'],'succeeded')
+        self.assertEqual(result['media_id'],'offline-media')
+        self.assertNotIn('publish_status',result)
+        self.assertNotIn('publish_id',result)
+        self.publisher.submit_publish.assert_not_called()
         args, token = self.publisher.build_newspic_article.call_args.args
         self.assertEqual(args.article_type,'newspic')
         self.assertEqual(args.content,self.manifest['caption'])

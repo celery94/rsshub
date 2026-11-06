@@ -1,6 +1,6 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
-publish_draft.py - 将文章发布到微信公众号草稿箱
+publish_draft.py - 保存微信公众号草稿
 
 用法:
   python publish_draft.py \
@@ -27,7 +27,7 @@ publish_draft.py - 将文章发布到微信公众号草稿箱
 样式预设: auto(自动推断) | default(通用) | code(代码密集) | essay(散文) | guide(教程) | none(无样式)
 消息类型: news(默认，图文草稿) | newspic(图片消息草稿，首张图即封面，最多 20 张)
 图片格式: webp/gif/bmp/tiff 会在上传前自动转换为 jpg（微信只接受 jpg/png）
-图片失败: 正文图片上传失败默认中止发布；可用 --ignore-image-errors 跳过（草稿内图片会缺失）
+图片失败: 正文图片上传失败默认中止创建草稿；可用 --ignore-image-errors 跳过（草稿内图片会缺失）
 删除草稿: --delete-draft MEDIA_ID 直接删除已有草稿，无需其他内容参数
 """
 
@@ -190,7 +190,7 @@ def convert_image_for_upload(image_path: str) -> Tuple[str, bool]:
 
     微信 uploadimg 与永久素材接口只接受 jpg/png；webp/gif/bmp/tiff 会触发
     errcode 40005 invalid file type。转换依赖 Pillow，缺失或失败时直接抛错，
-    避免带着坏图继续发布。
+    避免带着坏图继续创建草稿。
     """
     suffix = os.path.splitext(image_path)[1].lower()
     if suffix not in UNSUPPORTED_UPLOAD_SUFFIXES:
@@ -205,7 +205,7 @@ def convert_image_for_upload(image_path: str) -> Tuple[str, bool]:
     except ImportError as exc:
         raise RuntimeError(
             f"图片 {image_path} 是微信不支持的 {suffix} 格式，且未安装 Pillow。"
-            "请先 pip install Pillow，或手动转换为 jpg/png 后再发布。"
+            "请先 pip install Pillow，或手动转换为 jpg/png 后再创建草稿。"
         ) from exc
 
     try:
@@ -1024,7 +1024,10 @@ def add_draft(access_token: str, article: dict) -> str:
             f"新增草稿失败: errcode={data.get('errcode')}, "
             f"errmsg={data.get('errmsg')}"
         )
-    return data["media_id"]
+    media_id = data.get("media_id")
+    if not isinstance(media_id, str) or not media_id.strip():
+        raise ValueError("新增草稿响应缺少有效 media_id，请核对微信后台，勿自动重试")
+    return media_id
 
 
 def delete_draft(access_token: str, media_id: str) -> dict:
@@ -1056,7 +1059,7 @@ def validate_args(parser: argparse.ArgumentParser, args: argparse.Namespace) -> 
         parser.error("缺少 AppSecret：请通过 --secret 传入、设置环境变量 WECHAT_APP_SECRET，或在 .env 中配置")
     if args.delete_draft:
         return
-    if not args.title.strip():
+    if not args.title or not args.title.strip():
         parser.error("标题不能为空")
     if len(args.title) > MAX_TITLE_CHARS:
         parser.error(
@@ -1092,7 +1095,7 @@ def validate_args(parser: argparse.ArgumentParser, args: argparse.Namespace) -> 
 
 
 def main():
-    parser = argparse.ArgumentParser(description="发布文章到微信公众号草稿箱")
+    parser = argparse.ArgumentParser(description="保存微信公众号草稿")
     parser.add_argument(
         "--appid",
         default=os.environ.get("WECHAT_APP_ID"),
@@ -1139,7 +1142,7 @@ def main():
     parser.add_argument(
         "--ignore-image-errors",
         action="store_true",
-        help="正文图片上传失败时继续发布（不推荐，草稿内对应图片会缺失）",
+        help="正文图片上传失败时继续创建草稿（不推荐，草稿内对应图片会缺失）",
     )
     parser.add_argument(
         "--delete-draft",
@@ -1176,26 +1179,22 @@ def main():
     token = get_access_token(args.appid, args.secret)
     print("      access_token 已获取（已隐藏）")
 
-    if args.article_type == "news":
-        article = build_news_article(args, token)
-    else:
-        article = build_newspic_article(args, token)
-
+    article = build_news_article(args, token) if args.article_type == "news" else build_newspic_article(args, token)
     print("[4/4] 提交草稿到微信公众号草稿箱 ...")
     media_id = add_draft(token, article)
-
     result = {
         "success": True,
         "media_id": media_id,
         "title": args.title,
         "article_type": args.article_type,
         "image_count": len(article.get("image_info", {}).get("image_list", [])),
-        "message": "草稿已成功添加到草稿箱，请登录微信公众平台后台进行最终审核和发布。",
+        "message": "草稿已保存，未提交发布。",
     }
-    print("\n发布成功")
+    print(f"草稿已保存，media_id: {media_id}", flush=True)
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return result
 
 
 if __name__ == "__main__":
-    main()
+    outcome = main()
+    sys.exit(0 if outcome["success"] else 1)

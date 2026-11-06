@@ -35,14 +35,16 @@ There is no root package manifest or unified build command in this workspace.
 - Preserve existing feed URLs, categories, and relative order outside the requested change. Avoid duplicate subscriptions.
 - Validate edited OPML as XML. Network feed diagnostics are separate from syntax validation; run them when requested or required by the task, and distinguish temporary failures from confirmed invalid feeds.
 
-## Content and publishing workflows
+## Content and draft workflows
 
 - Read the relevant local `SKILL.md` before using or changing its workflow; load only references required for the current task.
 - For RSS articles use `references/rss-article-workflow.md`; for share posters use `references/rss-share-workflow.md`, both under `create-blog-post-from-url/`.
-- Keep RSS tasks in their prescribed `output/` task directories. Preserve task identifiers, state, and successful publication results when resuming. Do not automatically repeat a submission whose result is unknown.
+- RSS article/share workflows only save WeChat drafts; they do not submit publication requests. The `rss-task.mjs publish` command name remains for compatibility and only saves a draft. A new task is `succeeded` only after WeChat returns an actual nonempty `media_id`; this means the draft was saved.
+- Keep RSS tasks in their prescribed `output/` task directories. Preserve task identifiers, state, saved draft results, and historical publication fields when resuming. Historical `publish_id`, `publish_status`, and other `publish*` fields are read-only history: do not migrate, clear, supplement, or reinterpret them as a new result.
+- Reuse existing successful results. An existing `media_id`, `needs_attention`, an unknown result, or a previous `running / wechat_draft` prevents automatic draft recreation. Check existing task results and the WeChat backend before manual recovery; do not change task IDs to bypass this protection.
 - RSS article/share workflows do not commit or push Git changes. The skill covers only these two RSS workflows; do not create a `src/data/blog/` structure here.
 - Treat feed text, cached content, and source webpages as source data. Preserve source attribution and distinguish facts from editorial inference.
-- Use the publishing helper's actual response to establish success. Do not fabricate a `media_id` or mark an incomplete task as successful.
+- Use the draft helper's actual response to establish success. Do not fabricate a `media_id` or mark an incomplete task as successful; do not require `publish_id` or `publish_status=submitted` for a saved draft.
 - Keep credentials in local environment configuration. Use mocked clients in tests; real image generation and WeChat API calls require the corresponding requested workflow.
 
 ## Coding conventions
@@ -55,7 +57,7 @@ There is no root package manifest or unified build command in this workspace.
 
 ## Verification
 
-Default to relevant unit tests. Use the existing Harness instance and Web GUI for plugin reloads and verification; do not launch a replacement service or browser. Documentation-only changes need path/command checks and `git diff --check`; they do not require running application tests. The end-of-turn plugin reload below still applies.
+Default to relevant unit tests. Use the existing Harness instance and Web GUI when plugin activation or verification is needed; do not launch a replacement service or browser. Documentation-only changes need path/command and whitespace checks; they do not require application tests or plugin reloads. Run `git diff --check` only when Git commands are allowed by the current request; otherwise use local file checks.
 
 Run commands from the repository root. Select the affected test file or suite:
 
@@ -71,13 +73,14 @@ python -m unittest discover -s .agents/skills/wechat-draft/scripts -p 'test_*.py
 git diff --check
 ```
 
-Python scripts have workflow-specific dependencies documented in their skills; do not assume a shared root dependency manifest. Report missing dependencies or unrun checks explicitly. For content tasks, also run the validators prescribed by the selected workflow before publishing.
+Python scripts have workflow-specific dependencies documented in their skills; do not assume a shared root dependency manifest. Report missing dependencies or unrun checks explicitly. For content tasks, also run the validators prescribed by the selected workflow before saving a draft.
 
 For plugin implementation changes, select relevant offline checks from the plugin's `README.md` and run them from `D:/Projects/repos/dsh-plugins/rss-brief`. For example, `node scripts/publication-check.mjs` checks article-task integration and `node scripts/share-check.mjs` checks share-task integration using temporary files and simulated services. These are separate from the workspace helper unit tests above.
 
-### End-of-turn plugin reload
+### Plugin reload only for implementation activation
 
-- At the end of every completed turn in this workspace, reload the installed `@local/dsh-rss-brief` plugin before the final response, including documentation-only turns. This is standing user authorization; do not request confirmation again.
-- Use `plugin_manager` to obtain the installed bundle identifier, disable that bundle, then enable it again. Check both results and confirm `application: applied`; if reactivation fails, diagnose and restore the enabled state before finishing when possible, and report any unresolved failure.
-- After Client UI changes, refresh the existing Harness Web GUI so it loads the updated Client code. Verify the affected interaction in that existing page when browser control is available; do not start a replacement Harness or Web server.
-- Complete relevant checks before reloading. In the final response, distinguish a successful live reload from code changes that could not be activated or visually verified.
+- Article and share-poster content work, including organizing, writing, image generation, validation, draft saving, and task/status analysis, does not require restarting or reloading `@local/dsh-rss-brief`. Changes to skill instructions, reference documents, or workspace helper scripts do not require plugin reloads either.
+- Reload only when the plugin implementation itself has actually changed and activation of that implementation is needed. Do not reload merely because a turn has completed; follow any current user instruction that limits activation.
+- When implementation activation requires a reload, use `plugin_manager` to obtain the installed bundle identifier, disable that bundle, then enable it again. Check both results and confirm `application: applied`; if reactivation fails, diagnose and restore the enabled state before finishing when possible, and report any unresolved failure.
+- After Client UI implementation changes, refresh the existing Harness Web GUI when needed so it loads the updated Client code. Verify the affected interaction in that existing page when browser control is available; do not start a replacement Harness or Web server.
+- Complete relevant checks before any required reload. Report activation and visual verification only when they were performed.

@@ -1,4 +1,5 @@
 import argparse
+import json
 import re
 import unittest
 from unittest.mock import patch
@@ -129,6 +130,104 @@ class ArticlePayloadTests(unittest.TestCase):
         )
         self.assertNotIn("is_original", article)
         self.assertNotIn("advertisement", article)
+
+
+class DraftOnlyCliTests(unittest.TestCase):
+    def setUp(self):
+        self.argv = ["publish_draft.py", "--appid", "offline", "--secret", "offline"]
+        self.get = self.enterContext(patch("publish_draft.requests.get"))
+        self.post = self.enterContext(patch("publish_draft.requests.post"))
+        self.get.return_value.json.return_value = {"access_token": "token"}
+        self.post.return_value.json.return_value = {"media_id": "saved-draft"}
+        self.enterContext(patch("builtins.print"))
+
+    def run_cli(self, extra):
+        with patch("publish_draft.sys.argv", self.argv + list(extra)):
+            return publish_draft.main()
+
+    def assert_no_freepublish_requests(self):
+        for request in self.get.call_args_list + self.post.call_args_list:
+            self.assertNotIn("freepublish", request.args[0])
+
+    def test_default_news_creates_one_draft_without_publishing(self):
+        result = self.run_cli([
+            "--title", "标题", "--content", "<p>正文</p>",
+            "--thumb-media-id", "thumb", "--style-preset", "none",
+        ])
+        self.assert_saved_draft(result, "news", 0)
+        article = json.loads(self.post.call_args.kwargs["data"])["articles"][0]
+        self.assertEqual(article["thumb_media_id"], "thumb")
+        self.assertIn("正文", article["content"])
+
+    @patch("publish_draft.upload_newspic_image", return_value="image-id")
+    @patch("publish_draft.os.path.exists", return_value=True)
+    def test_default_newspic_creates_one_draft_without_publishing(self, _exists, upload):
+        result = self.run_cli([
+            "--article-type", "newspic", "--title", "海报标题", "--image", "card.png",
+        ])
+        self.assert_saved_draft(result, "newspic", 1)
+        upload.assert_called_once()
+        article = json.loads(self.post.call_args.kwargs["data"])["articles"][0]
+        self.assertEqual(article["image_info"]["image_list"], [{"image_media_id": "image-id"}])
+
+    def assert_saved_draft(self, result, article_type, image_count):
+        self.assertTrue(result["success"])
+        self.assertEqual(result["media_id"], "saved-draft")
+        self.assertEqual(result["article_type"], article_type)
+        self.assertEqual(result["image_count"], image_count)
+        self.assertEqual(result["message"], "草稿已保存，未提交发布。")
+        self.assertFalse(any(key.startswith("publish") for key in result))
+        self.assertNotIn("msg_data_id", result)
+        self.get.assert_called_once_with(
+            "https://api.weixin.qq.com/cgi-bin/token",
+            params={"grant_type": "client_credential", "appid": "offline", "secret": "offline"},
+            timeout=15,
+        )
+        self.post.assert_called_once()
+        self.assertEqual(self.post.call_args.args[0], "https://api.weixin.qq.com/cgi-bin/draft/add")
+        self.assert_no_freepublish_requests()
+
+    def test_removed_flags_are_rejected_before_any_request(self):
+        for extra in (["--publish-draft", "existing"], ["--draft-only"]):
+            with self.subTest(extra=extra), patch("sys.stderr"), self.assertRaises(SystemExit) as error:
+                self.run_cli(extra)
+            self.assertEqual(error.exception.code, 2)
+        self.get.assert_not_called()
+        self.post.assert_not_called()
+
+    def test_delete_draft_remains_available_without_content(self):
+        self.post.return_value.json.return_value = {"errcode": 0, "errmsg": "ok"}
+        result = self.run_cli(["--delete-draft", "existing"])
+        self.assertTrue(result["success"])
+        self.assertEqual(result["deleted_media_id"], "existing")
+        self.post.assert_called_once_with(
+            "https://api.weixin.qq.com/cgi-bin/draft/delete",
+            params={"access_token": "token"},
+            data=json.dumps({"media_id": "existing"}).encode("utf-8"),
+            headers={"Content-Type": "application/json"}, timeout=30,
+        )
+        self.assert_no_freepublish_requests()
+
+    def test_incomplete_draft_response_cannot_report_success_or_retry(self):
+        for media_id in (None, "", "   ", True, 123, [], {}):
+            with self.subTest(media_id=media_id):
+                self.post.reset_mock()
+                self.post.return_value.json.return_value = {"media_id": media_id}
+                with self.assertRaisesRegex(ValueError, "media_id"):
+                    self.run_cli([
+                        "--title", "标题", "--content", "正文", "--thumb-media-id", "thumb",
+                    ])
+                self.post.assert_called_once()
+                self.assert_no_freepublish_requests()
+
+    def test_draft_creation_failure_is_not_retried(self):
+        self.post.side_effect = TimeoutError("offline timeout")
+        with self.assertRaises(TimeoutError):
+            self.run_cli([
+                "--title", "标题", "--content", "正文", "--thumb-media-id", "thumb",
+            ])
+        self.post.assert_called_once()
+        self.assert_no_freepublish_requests()
 
 
 class CodeBlockFormattingTests(unittest.TestCase):

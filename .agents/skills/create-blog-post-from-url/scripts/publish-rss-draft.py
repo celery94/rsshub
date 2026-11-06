@@ -2,8 +2,9 @@
 """Private RSS helper bridge: reuse wechat-draft, never its independent CLI.
 
 Called by rss-task.mjs while its per-task lock is held. Preparation failures
-are retryable. Only the existing module's explicit draft/add API rejection is
-retryable after submission; every other submission outcome requires inspection.
+and explicit draft/add API rejection are retryable before a draft is saved.
+A nonempty media_id confirms the draft was saved; no publication API is called.
+Reentry with a saved draft or an unknown outcome never creates another draft.
 All imported publisher logs are discarded, including exception URLs/credentials.
 """
 import argparse
@@ -251,10 +252,18 @@ def run_bridge(task_dir, lock_token, title, digest, source, *, workspace=ROOT, m
     for data in (input_data, result):
         if data.get("version") != 1 or data.get("mode") != mode or data.get("task_id") != task_id or data.get("source_url") != source:
             fail("INVALID_STATE", "Bridge arguments do not match stored task input.")
-    if result.get("status") == "succeeded" and isinstance(result.get("media_id"), str) and result["media_id"].strip():
+    def finish(status, code=None, message=None, **changes):
+        result.update(status=status, stage="wechat_draft", **changes,
+                      error={"code": code, "message": message} if code else None,
+                      updated_at=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"))
+        atomic_result(result_path, result, task_dir)
         return result
-    if result.get("status") == "needs_attention":
+
+    # Preserve historical results, including publication errors, without migration.
+    if result.get("status") in ("succeeded", "needs_attention"):
         return result
+    if isinstance(result.get("media_id"), str) and result["media_id"].strip():
+        return finish("needs_attention", "WECHAT_SUBMISSION_UNKNOWN", "A draft already exists. Inspect the saved draft manually before any further action.")
     if result.get("stage") != "wechat_draft" or result.get("status") != "running" or result.get("article_path") != expected_article or result.get("title") != title:
         fail("INVALID_STATE", "The RSS helper must validate the article before calling the bridge.")
     cover_value = result.get("cover_path")
@@ -264,13 +273,6 @@ def run_bridge(task_dir, lock_token, title, digest, source, *, workspace=ROOT, m
         cover = contained(workspace / cover_value, task_dir / "assets")
         if not re.fullmatch(r"01-cover\.(?:png|jpg)", cover.name, re.I):
             fail("INVALID_STATE", "The cover must be a fixed task PNG or JPG.")
-
-    def finish(status, code=None, message=None, media_id=None):
-        result.update(status=status, stage="wechat_draft", media_id=media_id,
-                      error={"code": code, "message": message} if code else None,
-                      updated_at=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"))
-        atomic_result(result_path, result, task_dir)
-        return result
 
     # Link traversal is a structural path problem: raise it directly instead of
     # reporting a submission failure. Content validation stays inside the

@@ -1,14 +1,15 @@
 # RSS 单篇文章：输入、配图与微信草稿
 
-本参考用于 `rss-article` 模式：把一篇 RSS 文章或公开链接写成中文长文，配一张封面和至少一张正文图，保存为公众号 `news` 图文草稿。两种模式共同的约定见 `SKILL.md`，这里不再重复。插件的“文章”按钮会按本参考启动 Agent 任务；按钮与调度逻辑在插件源码中维护。
+本参考用于 `rss-article` 模式：把一篇 RSS 文章或公开链接写成中文长文，配一张封面和至少一张正文图，只保存为公众号 `news` 图文草稿，不提交发布，不调用 `freepublish/submit`。兼容命令 `rss-task.mjs publish` 只存草稿，微信实际返回非空 `media_id` 后，`succeeded` 表示“草稿已保存”。两种模式共同的约定见 `SKILL.md`，这里不再重复。插件的“文章”按钮会按本参考启动 Agent 任务；按钮与调度逻辑在插件源码中维护。
 
 ## 执行约定
 
-- 加载顺序：本技能，配图阶段加载 `azure-image-gen`，发布阶段加载 `wechat-draft`。
-- 默认中文、作者 `Aide Hub`、HD-2D 风格、一张宽封面和至少一张正文插图，第二张正文图按内容需要添加。正式发布由用户在微信后台完成。
+- 加载顺序：本技能，配图阶段加载 `azure-image-gen`，保存草稿阶段加载 `wechat-draft`，仅复用草稿能力。
+- 默认中文、作者 `Aide Hub`、HD-2D 风格、一张宽封面和至少一张正文插图，第二张正文图按内容需要添加。交付止于保存草稿，不提供提交发布能力。
 - 生图是主要等待项，按第 3 节的一次成图规则执行，不连续重生成来试探风格。
 - 任务状态以本任务 `result.json` 为准；`publications/{article_id}.json` 是按钮侧的交接记录，不由本流程维护或修改。
-- 用户明确缩小为只写文章、不配图或不上传时，遵从当次要求，保留产物并说明该任务未达到默认草稿交付标准；不要使用严格 RSS 发布命令强行上传不完整内容。
+- 用户明确缩小为只写文章、不配图或不上传时，遵从当次要求，保留产物并说明该任务未达到默认草稿交付标准；不要使用严格 RSS 草稿命令强行上传不完整内容。
+- 文章整理、写作、配图、校验、存草稿和相关任务状态分析无需重启或重载插件；技能、参考文档及工作区脚本变更也无需重载。仅实际修改插件实现且需要激活时才重载，并遵从用户当次限制。
 
 ## 任务输入
 
@@ -40,7 +41,7 @@
 
 仅传链接的会话请求也可执行：Agent 先按上述规则生成一个新的任务 ID 和输入文件。后续按钮应为同一篇文章的同一次操作复用相同任务 ID，不要在轮询或重试时不断生成新 ID。
 
-初始化会归一化 URL，例如 `https://example.com` 保存为 `https://example.com/`。写 frontmatter 时从已保存的 `input.json` 复制 `source_url`，不得再单独变更尾斜线、参数或片段；发布前要求 `source` 与该值精确一致。
+初始化会归一化 URL，例如 `https://example.com` 保存为 `https://example.com/`。写 frontmatter 时从已保存的 `input.json` 复制 `source_url`，不得再单独变更尾斜线、参数或片段；保存草稿前要求 `source` 与该值精确一致。
 
 命令示例中的 `node` 和 `python` 代表环境中可用的解释器；DSH 环境可通过依赖工具取得绝对路径，Windows PowerShell 执行带空格的解释器路径时使用 `& '完整路径'`。不要更改全局 PATH，也不要为该流程启动另一个 Web 服务。
 
@@ -93,7 +94,7 @@ node .agents/skills/create-blog-post-from-url/scripts/rss-task.mjs preflight
 
 预检不调用远程 API，仅检查有效配置是否存在，输出缺失变量名而不显示值。生图需要 `AZURE_IMAGE_ENDPOINT` + `AZURE_API_KEY`，或兼容的 `AZURE_OPENAI_ENDPOINT` + `AZURE_OPENAI_API_KEY`；微信需要 `WECHAT_APP_ID` + `WECHAT_APP_SECRET`。使用现有技能的环境变量和 `.env` 语义，不把密钥放进输入、提示词、文章、结果或命令行参数。
 
-Python 环境需要生图脚本的 `requests`、`Pillow`，以及微信脚本使用的 `beautifulsoup4`（导入名 `bs4`）和样式模块依赖。DSH 自带的 Python 不一定有这些包；用 `Get-Command python,py` 或 `py -0p` 找到已有解释器，验证 `import requests, PIL, bs4` 通过后，生图、引用检查和 `publish --python` 都用这同一个解释器。发布桥加载微信模块时也会检测导入失败。缺失时记录失败原因，不在无人值守任务中临时安装依赖。初始化、预检和后续阶段出错时保留任务目录。
+Python 环境需要生图脚本的 `requests`、`Pillow`，以及微信脚本使用的 `beautifulsoup4`（导入名 `bs4`）和样式模块依赖。DSH 自带的 Python 不一定有这些包；用 `Get-Command python,py` 或 `py -0p` 找到已有解释器，验证 `import requests, PIL, bs4` 通过后，生图、引用检查和 `publish --python` 都用这同一个解释器。草稿桥加载微信模块时也会检测导入失败。缺失时记录失败原因，不在无人值守任务中临时安装依赖。初始化、预检和后续阶段出错时保留任务目录。
 
 ### 2. 取证与写作
 
@@ -146,19 +147,19 @@ node .agents/skills/create-blog-post-from-url/scripts/validate-article.mjs outpu
 
 校验器实际检查的项目固定为：frontmatter 必需字段、标题不超过 32 字、摘要 80–120 字、标题和摘要不含中文弯引号、slug 与日期格式、`## 参考` 含 `source` 原文 URL、封面为 `./assets/01-cover.png`（或 `.jpg`）、至少一张 `./assets/02-illustration-{topic}.png`（或 `.jpg`）、图片为任务内 PNG/JPG、`cover-brief.json` 必填字段齐全且 `article_title` 与标题一致、禁用句式列表。按这些项目自检即可，不必通读 `validate-article.mjs`；只有报错时再定点读对应检查。
 
-`publish` 会在内部再完整校验一次，因此手动校验只需在正文和参考链接定稿后运行一轮，不要在发布前重复跑同一校验。
+`publish` 会在内部再完整校验一次，因此手动校验只需在正文和参考链接定稿后运行一轮，不要在存草稿前重复跑同一校验。
 
-只有链接检查、内容审查和文章校验均通过后进入发布。格式校验无法证明事实完整或文字质量，不能以脚本退出码代替审查。本工作区没有 Prettier，不安装，也不声称已运行。
+只有链接检查、内容审查和文章校验均通过后才能保存草稿。格式校验无法证明事实完整或文字质量，不能以脚本退出码代替审查。本工作区没有 Prettier，不安装，也不声称已运行。
 
-### 5. 保存到公众号草稿箱
+### 5. 保存草稿
 
 ```text
 node .agents/skills/create-blog-post-from-url/scripts/rss-task.mjs publish <task_id> --python <python-executable>
 ```
 
-辅助脚本再次验证文章，将 source 与输入 source_url 核对后，调用 `publish-rss-draft.py` 复用 `wechat-draft` 能力。发布桥从 frontmatter 读取 title、description、ogImage、source，作者为 `Aide Hub`，使用 Markdown、自动样式和 `news`，正文图片上传失败即停止。
+`publish` 命令名保留兼容，实际只存草稿。辅助脚本再次验证文章，将 source 与输入 source_url 核对后，调用 `publish-rss-draft.py` 复用 `wechat-draft` 的草稿能力。草稿桥从 frontmatter 读取 title、description、ogImage、source，作者为 `Aide Hub`，使用 Markdown、自动样式和 `news`，正文图片上传失败即停止。
 
-不要在 RSS 模式绕过辅助脚本直接调用独立 `publish_draft.py`，否则无法保护任务结果与重复提交。正文/封面/brief 不合格时停止；微信返回非空 `media_id` 才标记成功。报告“已保存到公众号草稿箱”，不能声称已正式发布。
+不要在 RSS 模式绕过辅助脚本直接调用独立 `publish_draft.py`，否则无法保护任务结果并防止重复建稿。正文/封面/brief 不合格时停止。仅调用 `draft/add` 创建草稿，保存微信实际返回的非空 `media_id`；不调用 `freepublish/submit`，不提交发布。新任务仅在取得该 `media_id` 时标记 `succeeded`，报告“草稿已保存”；不要求 `publish_id` 或 `publish_status=submitted`，`stage` 保持 `wechat_draft`。
 
 ### 6. 失败与恢复
 
@@ -168,20 +169,22 @@ node .agents/skills/create-blog-post-from-url/scripts/rss-task.mjs publish <task
 node .agents/skills/create-blog-post-from-url/scripts/rss-task.mjs fail <task_id> SOURCE_INCOMPLETE "无法取得完整原文，保留现有证据笔记"
 ```
 
-- `succeeded`：直接复用已有 `media_id` 与文件，不再次新增草稿。
-- `failed` 且尚未提交成功：修复具体问题后从相应阶段恢复，保留已完成产物。
-- `needs_attention` 或上次停留在 `running / wechat_draft`：可能已经创建草稿，禁止自动重试新增。先核对公众号草稿箱及任务结果，再人工处理。
-- 明确微信 API 拒绝可记录 `failed`；提交超时、断连、无法解析响应、进程中断按结果未知处理。微信请求错误可能含 token URL，不将原始异常写进结果或回显。
-- 同一 `task_id` 的锁用于阻止并发修改与重复发布；陈旧锁不自动删除，确认没有执行者后才能人工恢复。不要为了重试自动换任务 ID。
+- `succeeded`：直接复用已有 `media_id`、文件与历史结果，不再次创建草稿。旧成功结果即使缺少 `publish_id` 或 `publish_status` 也不补发或改写。
+- 已有非空 `media_id`：无论当前状态为何，都保留已有草稿结果，禁止自动重建。
+- `failed` 且确认尚未创建草稿、结果也非未知：修复具体问题后从相应阶段恢复，保留已完成产物。
+- `needs_attention`、结果未知或上次停留在 `running / wechat_draft`：可能已经创建草稿，保留错误及已取得的 `media_id`，禁止自动重建。历史 `needs_attention` 保持原样；旧 `running / wechat_draft` 由 helper 按未知结果转为 `needs_attention`。先核对微信后台及任务结果，再人工处理；不能仅因改为草稿流程就将旧未知状态改成成功。
+- 历史 `publish_id`、`publish_status`、其他 `publish*` 字段及旧发布错误只读保留，不迁移、不清空、不补写，不重试历史发布请求。
+- 新增草稿被微信明确拒绝可记录 `failed`；创建草稿超时、断连、无法解析响应或进程中断按结果未知处理，记录 `needs_attention`。微信请求错误可能含 token URL，不将原始异常写进结果或回显。
+- 同一 `task_id` 的锁用于阻止并发修改与重复建稿；陈旧锁不自动删除，确认没有执行者后才能人工恢复。不要为了重试自动换任务 ID。
 - 本地辅助脚本只保护同一 ID。跨任务 ID、跨项目或其他工具创建的重复稿件，需要后续按钮/任务服务统一关联文章与任务；本次不新增该服务。
 
 ## 结构化结果
 
 任务阶段固定为 `evidence / writing / images / validation / wechat_draft`；状态固定为 `running / succeeded / failed / needs_attention`。辅助脚本原子保存 UTF-8 `result.json`，供后续按钮读取；终态保留具体阶段，不用 `completed` 替换阶段。
 
-结果字段为：`version`、`mode`、`task_id`、`source_url`、`status`、`stage`、`title`、`article_path`、`cover_path`、`inline_image_paths`、`media_id`、`error`、`created_at`、`updated_at`。产物路径使用相对工作区根目录的正斜线路径；初始化时标题可沿用输入 title，未提供时为 null，发布前更新为最终文章标题。尚未校验的封面为 null、正文图片列表为空数组，未取得的 media_id 为 null。`error` 为 null 或 `{ "code": "稳定错误码", "message": "不含敏感信息的原因" }`。
+新任务结果字段为：`version`、`mode`、`task_id`、`source_url`、`status`、`stage`、`title`、`article_path`、`cover_path`、`inline_image_paths`、`media_id`、`error`、`created_at`、`updated_at`。产物路径使用相对工作区根目录的正斜线路径；初始化时标题可沿用输入 title，未提供时为 null，保存草稿前更新为最终文章标题。尚未校验的封面为 null、正文图片列表为空数组，未取得的 media_id 为 null。只有微信实际返回非空 `media_id` 后才将新任务标记 `succeeded`，表示“草稿已保存”。新任务不生成发布字段；历史 `publish_id`、`publish_status` 及其他 `publish*` 字段只读保留，不迁移或补写。失败或未知保留已取得的 `media_id` 与历史字段；历史终态结果保持原样，读取时不触发建稿、补发或状态改写。旧 `running / wechat_draft` 仅按前述恢复规则转为 `needs_attention`。`error` 为 null 或 `{ "code": "稳定错误码", "message": "不含敏感信息的原因" }`。
 
-成功结果示意（media_id 为示例占位，不能当作真实微信返回）：
+草稿保存成功结果示意（media_id 为示例占位，不能当作真实微信返回）：
 
 ```json
 {
@@ -204,4 +207,4 @@ node .agents/skills/create-blog-post-from-url/scripts/rss-task.mjs fail <task_id
 }
 ```
 
-最终回复包含任务 ID、状态、文章/封面/正文图/结果路径，以及实际微信 `media_id`。失败时说明具体阶段和已保留资源。
+最终回复包含任务 ID、状态、文章/封面/正文图/结果路径，以及微信实际返回的 `media_id`。新任务成功报告“草稿已保存”，不宣称已提交发布或发布完成。旧结果中的发布字段仅按历史信息说明，缺少时不补写，原状态不迁移。失败或未知时说明具体阶段和已保留资源与 `media_id`。

@@ -79,6 +79,7 @@ class MultiImageBridgeTests(unittest.TestCase):
             build_news_article=Mock(),
             build_newspic_article=Mock(return_value={'article_type': 'newspic', 'image_info': {'image_list': [{'image_media_id': 'media-1'}, {'image_media_id': 'media-2'}]}}),
             add_draft=Mock(return_value='offline-media'),
+            submit_publish=Mock(side_effect=AssertionError('Publication must never be called')),
         )
         environment = patch.dict(os.environ, {'WECHAT_APP_ID': 'configured-app', 'WECHAT_APP_SECRET': 'configured-secret'}, clear=True)
         environment.start()
@@ -100,6 +101,10 @@ class MultiImageBridgeTests(unittest.TestCase):
     def test_success_uploads_every_image_in_order(self):
         result = self.run_bridge()
         self.assertEqual(result['status'], 'succeeded')
+        self.assertEqual(result['media_id'], 'offline-media')
+        self.assertNotIn('publish_status', result)
+        self.assertNotIn('publish_id', result)
+        self.publisher.submit_publish.assert_not_called()
         args, token = self.publisher.build_newspic_article.call_args.args
         self.assertEqual(args.article_type, 'newspic')
         self.assertEqual(args.image, [str(image) for image in self.images])

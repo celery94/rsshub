@@ -221,10 +221,13 @@ export function createTaskRunner({ workspace = PROJECT_ROOT, environment = proce
     return next;
   }
   function unknown(files, result) {
-    return save(files, result, { status: "needs_attention", stage: "wechat_draft", error: { code: "WECHAT_SUBMISSION_UNKNOWN", message: "Draft submission may have reached WeChat. Check the draft box manually before taking any further action." } });
+    const hasDraft = typeof result.media_id === "string" && Boolean(result.media_id.trim());
+    return save(files, result, { status: "needs_attention", stage: "wechat_draft", error: { code: "WECHAT_SUBMISSION_UNKNOWN", message: hasDraft ? "A draft already exists. Inspect the saved draft manually before taking any further action." : "Draft submission may have reached WeChat. Check the draft box manually before taking any further action." } });
   }
   function protectedState(files, result) {
-    if (result.status === "succeeded" || result.status === "needs_attention") return result;
+    // Keep historical successes and attention states intact; never recreate a saved draft.
+    if (["succeeded", "needs_attention"].includes(result.status)) return result;
+    if (typeof result.media_id === "string" && result.media_id.trim()) return unknown(files, result);
     if (result.stage === "wechat_draft" && !(result.status === "failed" && SAFE_FAILURES.has(result.error?.code))) return unknown(files, result);
     return null;
   }
@@ -319,14 +322,16 @@ export function createTaskRunner({ workspace = PROJECT_ROOT, environment = proce
       try {
         if (runBridge) completion = await runBridge(request);
         else completion = spawnSync(python, [path.join(HERE, "publish-rss-draft.py"), "--task-dir", files.dir, "--lock-token", lockToken, `--title=${metadata.title}`, `--digest=${metadata.digest}`, `--source=${metadata.source}`], { cwd: root, env: environment, stdio: "ignore", windowsHide: true });
-      } catch { return unknown(files, result); }
+      } catch { completion = null; }
       let current;
       try { current = load(files).result; } catch { return unknown(files, result); }
-      // A durable nonempty media_id is a known success, even if the child
-      // subsequently exited abnormally. Never downgrade that evidence.
+      // Always reread durable state, even when the bridge threw after saving a draft.
+      // The media_id is sufficient to confirm a successful draft save.
       if (current.status === "succeeded" && typeof current.media_id === "string" && current.media_id.trim()) return current;
+      const currentProtected = protectedState(files, current);
+      if (currentProtected) return currentProtected;
       if (!completion || completion.error || completion.signal || completion.status !== 0) return unknown(files, current);
-      if (current.status === "needs_attention" || (current.status === "failed" && SAFE_FAILURES.has(current.error?.code))) return current;
+      if (current.status === "failed" && SAFE_FAILURES.has(current.error?.code)) return current;
       return unknown(files, current);
     }),
   };
