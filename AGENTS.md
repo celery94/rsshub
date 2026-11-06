@@ -10,23 +10,24 @@ Applies to the entire repository. Follow any more specific instructions in the d
 
 ## Workspace and plugin relationship
 
-This repository is the working directory for the DeepSeek Harness `rss-brief` plugin. It provides subscriptions, Agent skills, local configuration, and generated content. Plugin implementation lives separately at `D:/Projects/repos/dsh-plugins/rss-brief` (package `@local/dsh-rss-brief`).
+This repository is the complete source and release root for the DeepSeek Harness `rss-brief` plugin (package `@local/dsh-rss-brief`). `index.js`, `client.js`, `lib/`, `skills/`, and the package manifest are maintained together. The old `D:/Projects/repos/dsh-plugins/rss-brief` directory is a migration fallback, not the development source.
 
-- Plugin source and behavior: consult that directory's `README.md`, `index.js`, `client.js`, and `lib/`. Its `cordis.patch.yml` points `opmlPath` to this workspace's `folo.opml`.
-- The plugin's `articleWorkspace` selects the Agent working directory; by default it uses the OPML parent directory. This workspace supplies the three skills listed below for article and share-poster tasks.
-- Runtime data defaults to `%USERPROFILE%/.dsh/rss-brief`, including `rss-brief.sqlite`, cached content, and publication task associations. This is separate from workspace `output/` artifacts. Do not delete or rewrite runtime data as part of routine workspace maintenance or testing.
-- Feed scheduling, article retrieval, analysis, reader UI, and task/session integration belong to the plugin source. Local content editing, image generation, validation, and WeChat draft helpers belong here. Changing a skill does not change plugin UI or scheduling.
-- This file governs this workspace. Before editing the separate plugin repository, inspect its applicable instructions and Git state. Keep workspace-only requests within this repository.
+- `cordis.patch.yml` contains portable defaults only. Non-secret machine settings belong in `<dataDir>/config.json`; explicit Cordis row config overrides those settings. Never edit the active profile patch directly.
+- The plugin's `articleWorkspace` selects the Agent output and credentials directory. A fresh install defaults to `<dataDir>/workspace`; an explicit OPML path retains its parent-directory fallback. This installation keeps its historical workspace so existing output paths and task records remain valid.
+- Runtime data defaults to `%USERPROFILE%/.dsh/rss-brief`, including `rss-brief.sqlite`, cached content, and publication task associations. Do not delete or rewrite runtime data as part of routine maintenance or testing.
+- Personal subscriptions are external OPML selected by machine settings; the repository provides an empty example only. Do not pack personal subscriptions, credentials, runtime data, or generated content.
+- The installed plugin registers the three skills from `skills/`. The old `.agents/skills` directory has been removed; use the installed skill resources and current helper paths.
+- Feed scheduling, retrieval, analysis, reader UI, and task/session integration are in the root plugin. Editing skills does not require plugin reloads.
 
-There is no root package manifest or unified build command in this workspace.
+Use `npm ci --ignore-scripts`, `npm run check`, `npm test`, `npm run test:python`, and `npm run package:check` from this repository root. `npm run release:pack` creates a verified local package and checksum without uploading.
 
 ## Workspace files
 
-- `folo.opml`: subscription export for Folo.
-- `订阅分类目录.md`: human-readable subscription categories and source links.
-- `.agents/skills/create-blog-post-from-url/`: URL/RSS article and share-poster workflows, task helpers, validators, and tests.
-- `.agents/skills/azure-image-gen/`: Azure image generation and editing helper and tests.
-- `.agents/skills/wechat-draft/`: WeChat draft publishing, styles, and tests.
+- `index.js`, `client.js`, `lib/`: Host, Client, and runtime modules.
+- `skills/create-blog-post-from-url/`: URL/RSS article and share-poster workflows, task helpers, validators, and tests.
+- `skills/azure-image-gen/`: Azure image generation and editing helper and tests.
+- `skills/wechat-draft/`: WeChat draft publishing, styles, and tests.
+- `examples/`: portable configuration and empty OPML examples. Personal OPML and its human-readable category catalogue live together outside this repository.
 - `output/` and `.cache/`: ignored local artifacts. `.env` holds local configuration; never copy its contents or credentials into instructions, logs, or tracked files.
 
 ## Subscription changes
@@ -63,19 +64,19 @@ Run commands from the repository root. Select the affected test file or suite:
 
 ```powershell
 # Node.js built-in unit tests for article/task/share helpers
-node --test .agents/skills/create-blog-post-from-url/scripts/test-*.mjs
+node --test skills/create-blog-post-from-url/scripts/test-*.mjs
 
 # Python unit tests, with each scripts directory available for sibling imports
-python -m unittest discover -s .agents/skills/create-blog-post-from-url/scripts -p 'test_*.py'
-python -m unittest discover -s .agents/skills/azure-image-gen/scripts -p 'test_*.py'
-python -m unittest discover -s .agents/skills/wechat-draft/scripts -p 'test_*.py'
+python -m unittest discover -s skills/create-blog-post-from-url/scripts -p 'test_*.py'
+python -m unittest discover -s skills/azure-image-gen/scripts -p 'test_*.py'
+python -m unittest discover -s skills/wechat-draft/scripts -p 'test_*.py'
 
 git diff --check
 ```
 
 Python scripts have workflow-specific dependencies documented in their skills; do not assume a shared root dependency manifest. Report missing dependencies or unrun checks explicitly. For content tasks, also run the validators prescribed by the selected workflow before saving a draft.
 
-For plugin implementation changes, select relevant offline checks from the plugin's `README.md` and run them from `D:/Projects/repos/dsh-plugins/rss-brief`. For example, `node scripts/publication-check.mjs` checks article-task integration and `node scripts/share-check.mjs` checks share-task integration using temporary files and simulated services. These are separate from the workspace helper unit tests above.
+For plugin implementation changes, run relevant offline checks from this repository root. `npm test` runs the Host/Client check scripts and skill Node tests; `npm run test:python` runs the three Python suites; `npm run package:check` packs the actual allowlisted files, installs the tarball into a clean temporary project, and verifies Host mounting and bundled skill resources. These checks never use the shared production database or real model/WeChat services.
 
 ### Plugin reload only for implementation activation
 

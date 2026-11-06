@@ -1,0 +1,6 @@
+{
+  "timeZone": "Asia/Shanghai",
+  "fetchIntervalMinutes": 60,
+  "analysisEnabled": true,
+  "analysisPerSync": 40
+}

@@ -1,0 +1,44 @@
+{
+  "name": "@local/dsh-rss-brief",
+  "version": "0.3.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "description": "RSS 阅读、文章评估与微信公众号草稿创作，包含配套 Agent 技能。",
+  "repository": { "type": "git", "url": "git+https://github.com/celery94/rsshub.git" },
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js", "client.js", "lib/**/*.js", "cordis.patch.yml",
+    "locale/*.json", "icon.svg", "README.md", "LICENSE", "THIRD_PARTY_NOTICES.md",
+    "docs/*.md", "examples/*", "requirements.txt",
+    "skills/*/SKILL.md", "skills/*/references/*.md", "skills/*/examples/*.json",
+    "skills/*/scripts/*.mjs", "skills/*/scripts/*.py", "!skills/*/scripts/test*",
+    "skills/*/scripts/styles/*.css", "skills/*/design/*.md"
+  ],
+  "engines": {
+    "node": "^22.22.2 || ^24.15.0 || >=26.0.0",
+    "dsh": ">=0.2.2-rc.1 <0.3.0"
+  },
+  "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" },
+    "client": { "platform": "web", "immediately": true, "inject": [] }
+  },
+  "scripts": {
+    "build": "node --check index.js && node --check client.js",
+    "check": "node scripts/validate.mjs",
+    "test": "node scripts/validate.mjs --test",
+    "test:python": "node scripts/validate.mjs --python",
+    "package:check": "node scripts/package-check.mjs",
+    "release:pack": "node scripts/release.mjs",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "@mozilla/readability": "0.6.0",
+    "jsdom": "30.1.3"
+  }
+}

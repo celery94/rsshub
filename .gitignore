@@ -33,5 +33,15 @@ __pycache__/
 *.pyc
 
 # Local RSS article tasks (inputs, generated images, WeChat results)
-output
+output/
+artifacts/
+*.tgz
 *.bak
+*.bak-*
+.env.*
+!.env.example
+# Legacy skill discovery is provided by the installed bundle.
+/.agents/skills/
+# Personal subscription lists live outside the plugin source.
+/folo.opml
+/订阅分类目录.md
