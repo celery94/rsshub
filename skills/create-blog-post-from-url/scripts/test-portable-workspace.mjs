@@ -65,8 +65,15 @@ test('packaged helper imports and Node/Python CLIs work without legacy workspace
   }
 });
 
-test('real Python bridge loads sibling publisher in supplied skillRoot and workspace env', async t => {
+for (const shortWorkspace of [false, true]) {
+test(`real Python bridge loads sibling publisher in supplied skillRoot and workspace env${shortWorkspace ? ' with Windows short paths' : ''}`, {skip:shortWorkspace && process.platform !== 'win32'}, async t => {
   const f = fixture(t);
+  if (shortWorkspace) {
+    const alias = spawnSync(python, ['-c', "import ctypes, sys; buffer = ctypes.create_unicode_buffer(32768); length = ctypes.windll.kernel32.GetShortPathNameW(ctypes.c_wchar_p(sys.argv[1]), buffer, len(buffer)); assert length; print(buffer.value)", f.workspace], {encoding:'utf8'});
+    assert.equal(alias.status, 0, alias.stderr);
+    f.workspace = alias.stdout.trim();
+    if (!f.workspace.includes('~')) return t.skip('Windows short names are unavailable on this volume');
+  }
   f.cli('init', 'request.json');
   const dir = path.join(f.workspace, 'output/rss-articles/portable-1');
   const description = '离线验证说明。'.repeat(12);
@@ -89,3 +96,4 @@ test('real Python bridge loads sibling publisher in supplied skillRoot and works
   assert.equal((await portable.publish('portable-1', python)).media_id, result.media_id);
   assert.equal(fs.existsSync(path.join(f.workspace, '.agents')), false);
 });
+}

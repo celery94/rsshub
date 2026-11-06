@@ -122,8 +122,10 @@ export function configurationReport(root, environment = process.env) {
 /** Injection points are module APIs for offline tests, never CLI switches. */
 export function createTaskRunner({ workspace = process.cwd(), skillRoot = SKILL_ROOT, environment = process.env, mode = "rss-article", validator, runBridge } = {}) {
   if (!["rss-article", "rss-share"].includes(mode)) reject("INVALID_MODE", "Expected rss-article or rss-share mode.");
-  const root = fs.realpathSync(workspace);
-  const scripts = path.join(fs.realpathSync(skillRoot), "scripts");
+  // Use the OS canonical spelling: Python Path.resolve expands Windows 8.3
+  // aliases too, so both processes must compare paths with the same root.
+  const root = fs.realpathSync.native(workspace);
+  const scripts = path.join(fs.realpathSync.native(skillRoot), "scripts");
   const relative = file => path.relative(root, file).split(path.sep).join("/");
   function safe(file, boundary = root) {
     const absolute = path.resolve(file);
