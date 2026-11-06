@@ -25,7 +25,7 @@
 
 一次写好全部图片的 poster-brief.json：每张记录 `file`、`message`、`concept`、`texts`、`final_prompt`。texts 列出必须出现的标题、短标签、必要数字、引语、出处与限定词。提示词说明对象关系和 HD-2D 风格，不规定坐标、字号或固定模板。
 
-读取一次 [hd-2d-style.md](hd-2d-style.md)。默认让 Azure 每张一次生成整张海报（含文字），使用 `--skip-post-process` 保留高清原图；用户要求无文字底图或本地排版时遵从，脚本与底图留在任务目录，assets 只放最终图片。优先复用本任务已有素材，不浏览其他任务目录。
+读取一次 [hd-2d-style.md](hd-2d-style.md)。按 poster-brief.json 让 Azure 每张一次直接生成含全部 texts 的完整海报，`--output` 直接写入 assets，使用 `--skip-post-process` 保持分辨率。不生成无文字底图，不做本地排版、文字叠加或二次合成，不浏览其他任务目录。
 
 ```text
 <已验证的Python> <azure-image-gen-dir>/scripts/azure_generate_image.py "<final_prompt>" --size 1536x2048 --skip-post-process --output output/rss-shares/<task_id>/assets/01-cover.png

@@ -219,14 +219,14 @@
     {
       "id": 14,
       "prompt": "使用 rss-share 模式处理任务 rss-share-earnings-001：原文是一家公司的季度财报，给出了本季度营收 120 亿美元和下季度营收指引 135 亿美元。保存到公众号草稿箱。",
-      "expected_output": "两项数字单位相同、口径可比，选择 comparison 版式，并在 poster-brief.json 记录理由。comparison.label 写清时间与「实绩／指引」口径，左右 unit 一致。插画无文字，海报由本地渲染器排版；validate-share.mjs 通过后经 rss-task publish 保存 newspic 草稿，image_count 为 1。",
+      "expected_output": "两项数字单位相同、口径可比，选择 comparison 版式，并在 poster-brief.json 记录理由。comparison.label 写清时间与「实绩／指引」口径，左右 unit 一致。Azure 按 poster-brief 一次直接生成含文字的完整海报，不出无文字底图或本地排版；validate-share.mjs 通过后经 rss-task publish 保存 newspic 草稿，image_count 为 1。",
       "files": [],
       "assertions": [
         {
           "text": "Comparable same-unit figures select the comparison layout, and the label distinguishes actuals from guidance."
         },
         {
-          "text": "The generated scene contains no text; all text and numbers are rendered locally from share.json."
+          "text": "Each poster is generated once by Azure with all brief texts in the image; no text-free base image or local text overlay is produced."
         },
         {
           "text": "Publishing goes through the rss-share helper and succeeds only with article_type newspic, image_count 1, and a real media_id."
