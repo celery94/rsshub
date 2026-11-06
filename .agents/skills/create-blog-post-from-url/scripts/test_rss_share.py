@@ -1,4 +1,4 @@
-"""Offline share publisher and deterministic renderer tests. No live API imports."""
+"""Offline share publisher and legacy compatibility tests. No live API imports."""
 import importlib.util
 import json
 import os
@@ -7,7 +7,7 @@ import tempfile
 from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
-from PIL import Image, ImageChops
+from PIL import Image
 
 
 def load(name, filename):
@@ -17,7 +17,6 @@ def load(name, filename):
     return module
 
 BRIDGE = load('share_bridge', 'publish-rss-draft.py')
-RENDER = load('share_render', 'render-share-poster.py')
 SOURCE = 'https://source.example/article'
 CAPTION = '根据原文介绍，这项更新提供了新的技术线索。读者可以先核对版本、权限和适用条件，再结合自己的使用场景判断是否值得尝试。实际操作前保存现有配置，并在小范围验证效果，记录具体差异。文中的能力说明以原文为依据，具体表现仍需结合本地环境检查，避免直接套用未经验证的结论。'
 
@@ -145,31 +144,56 @@ class ShareTests(unittest.TestCase):
             self.assertEqual(self.run_bridge()['error']['code'],'WECHAT_PREPARATION_FAILED')
         self.publisher.add_draft.assert_not_called()
 
-    def test_renderer_is_deterministic_high_resolution_and_preserves_raw(self):
-        scene=self.task/'raw-scene.png'
-        Image.new('RGB',(1536,2048),'steelblue').save(scene)
-        raw=scene.read_bytes()
-        result=RENDER.render(scene,self.task/'share.json')
-        self.assertEqual((result['width'],result['height']),(1536,2048))
-        with Image.open(self.poster) as image:
-            first=image.copy()
-        RENDER.render(scene,self.task/'share.json')
-        with Image.open(self.poster) as image:
-            self.assertIsNone(ImageChops.difference(first,image).getbbox())
-        self.assertEqual(scene.read_bytes(),raw)
-        self.assertEqual(self.run_bridge()['status'],'succeeded')
+    def test_legacy_content_requires_valid_key_points_before_upload(self):
+        self.write('input.json', dict(version=1, mode='rss-share', task_id='share-1',
+                                     source_url=SOURCE, poster_layout='content'))
+        points = ['数据中心业务增长带动整体表现，仍需结合实际需求判断。',
+                  '产品更新的实际影响，需要结合版本与部署条件核对。']
+        for invalid in [None, [], points[:1], [points[0], '短句'], [points[0], '**不允许使用标记的内容说明**']]:
+            with self.subTest(points=invalid):
+                self.write('result.json', self.result)
+                self.write('share.json', {**self.manifest, 'key_points': invalid})
+                self.assert_no_upload()
+        self.write('result.json', self.result)
+        self.write('share.json', {**self.manifest, 'key_points': points})
+        self.assertEqual(self.run_bridge()['status'], 'succeeded')
 
-    def test_renderer_rejects_small_scene_and_text_overflow(self):
-        scene=self.task/'raw-scene.png'
-        Image.new('RGB',(500,700)).save(scene)
-        with self.assertRaises(ValueError): RENDER.render(scene,self.task/'share.json')
-        Image.new('RGB',(1080,1440)).save(scene)
-        self.write('share.json',{**self.manifest,'headline':'长'*25})
-        with self.assertRaises(ValueError): RENDER.render(scene,self.task/'share.json')
+    def test_legacy_editorial_validation_without_renderer(self):
+        self.write('input.json', dict(version=1, mode='rss-share', task_id='share-1',
+                                     source_url=SOURCE, poster_layout='editorial'))
+        self.assert_no_upload()
+        sections = [
+            {'heading': '增长来源', 'body': '数据中心需求支持业务增长，仍需核对利润率变化与后续订单。'},
+            {'heading': '比较边界', 'body': '比较不同公司的预测与已披露数据时，需要确认统计口径和时间。'},
+        ]
+        for layout in ('comparison', 'insight', 'steps'):
+            with self.subTest(layout=layout):
+                editorial = {'layout': layout, 'sections': sections}
+                if layout == 'comparison':
+                    editorial['comparison'] = {
+                        'label': '测试季度预测数据',
+                        'left': {'name': '示例甲', 'value': '170', 'unit': '测试单位'},
+                        'right': {'name': '示例乙', 'value': '150–160', 'unit': '测试单位'},
+                    }
+                self.write('result.json', self.result)
+                self.write('share.json', {**self.manifest, 'editorial': {**editorial, 'extra': 1}})
+                self.assert_no_upload()
+                self.write('result.json', self.result)
+                self.write('share.json', {**self.manifest, 'editorial': editorial})
+                self.assertEqual(self.run_bridge()['status'], 'succeeded')
+                for method in vars(self.publisher).values():
+                    method.reset_mock()
 
-    def test_check_mode_requires_editorial_manifest(self):
-        with self.assertRaisesRegex(ValueError,'Check mode requires an editorial manifest'):
-            RENDER.render(None,self.task/'share.json',check=True)
+    def test_article_bridge_rejects_share_only_layout_field(self):
+        import test_publish_rss_draft as article_helper
+        fixture = article_helper.BridgeTests('test_success_uses_original_load_env_and_namespace_contract')
+        fixture.setUp()
+        self.addCleanup(fixture.doCleanups)
+        fixture.write_json('input.json', {**fixture.input, 'poster_layout': 'content'})
+        with self.assertRaises(article_helper.BRIDGE.BridgeError):
+            fixture.run_bridge()
+        fixture.publisher.get_access_token.assert_not_called()
+        fixture.publisher.add_draft.assert_not_called()
 
 if __name__ == '__main__':
     unittest.main()

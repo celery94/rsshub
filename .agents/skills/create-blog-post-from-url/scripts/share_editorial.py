@@ -1,4 +1,4 @@
-"""Strict editorial manifest contract shared by offline rendering and private publishing."""
+"""Legacy editorial manifest validation for the private publishing bridge."""
 import re
 
 LAYOUTS = ('comparison', 'insight', 'steps')

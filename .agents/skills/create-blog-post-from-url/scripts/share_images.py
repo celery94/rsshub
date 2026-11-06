@@ -1,9 +1,8 @@
 """Strict contract for the multi-image RSS share manifest (share.json `images`).
 
-Shared by the offline renderer and the private publishing bridge, so both sides
-accept exactly the same manifests. Legacy single-poster manifests (`poster` +
-`editorial` or `key_points`) are validated by share_editorial.py and
-validate-share.mjs; this module never accepts them.
+Used by the private publishing bridge for final share images. Legacy single-poster
+manifests (`poster` + `editorial` or `key_points`) are validated by
+share_editorial.py and validate-share.mjs; this module never accepts them.
 """
 import re
 from urllib.parse import urlsplit
