@@ -768,12 +768,13 @@ export function apply(ctx, rawConfig) {
   function registerTools() {
     ctx.tools.register({
       name: "rss_brief_subscriptions",
-      description: "List or manually add, update, or delete RSS subscriptions and their groups. Returns the full subscription snapshot; changes preserve article history and do not fetch feeds.",
+      description: "Manage RSS subscriptions or preview and merge OPML imports. Existing imported URLs keep their metadata and order. Returns a snapshot or import preview; preserves article history without fetching feeds.",
       parameters: {
         type: "object",
         properties: {
-          action: { type: "string", enum: ["list", "add", "update", "delete"], description: "Operation to perform." },
-          revision: { type: "string", description: "Latest list revision; required for changes. Refresh after a conflict." },
+          action: { type: "string", enum: ["list", "add", "update", "delete", "previewImport", "import"], description: "previewImport reads OPML; import confirms merging only new feeds." },
+          opml: { type: "string", description: "Original OPML XML, at most 1 MiB UTF-8; required only for previewImport/import. Preview before confirming the same XML." },
+          revision: { type: "string", description: "Latest list/preview revision; required for add/update/delete/import, omitted for previewImport. Refresh after a conflict." },
           originalUrl: { type: "string", description: "Existing RSS URL; required for update/delete." },
           feed: {
             type: "object", description: "Complete subscription for add/update.",
@@ -887,8 +888,8 @@ export function apply(ctx, rawConfig) {
       }
       try {
         if (state.disposed) throw Object.assign(new Error("插件暂不可用。"), { statusCode: 503 });
-        const args = method === "GET" ? { action: "list" } : await readJsonBody(request);
-        if (method === "POST" && args?.action === "list") throw Object.assign(new Error("POST 仅接受 add/update/delete。"), { statusCode: 400 });
+        const args = method === "GET" ? { action: "list" } : await readJsonBody(request, true);
+        if (method === "POST" && args?.action === "list") throw Object.assign(new Error("POST 仅接受 add/update/delete/previewImport/import。"), { statusCode: 400 });
         writeJson(response, 200, subscriptions(args));
       } catch (error) {
         writeJson(response, error.statusCode ?? 503, { ok: false, code: error.code ?? "subscriptions-unavailable", message: messageOf(error) });
@@ -1730,15 +1731,15 @@ function textBlock(text) {
   return { type: "text", text: String(text) };
 }
 
-/** Read a small JSON request body. */
-function readJsonBody(request) {
+/** Read bounded JSON; subscription imports allow room for escaped 1 MiB XML. */
+function readJsonBody(request, allowImport = false) {
   return new Promise((settle) => {
     let size = 0;
     let oversized = false;
     const chunks = [];
     request.on("data", (chunk) => {
       size += chunk.length;
-      if (size > BODY_LIMIT_BYTES) {
+      if (size > (allowImport ? 8 * 1024 * 1024 : BODY_LIMIT_BYTES)) {
         oversized = true;
         return;
       }
@@ -1755,7 +1756,8 @@ function readJsonBody(request) {
         return;
       }
       try {
-        settle(JSON.parse(text));
+        const body = JSON.parse(text);
+        settle(size > BODY_LIMIT_BYTES && !["previewImport", "import"].includes(body?.action) ? null : body);
       } catch {
         settle(null);
       }

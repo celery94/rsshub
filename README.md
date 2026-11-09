@@ -31,11 +31,15 @@ Python 依赖由用户显式安装到选定环境，例如 `python -m pip instal
 
 `articleWorkspace` 中的环境配置供创作脚本读取，绝不随包分发。产物写入该工作区的 `output/`。插件随包注册 `create-blog-post-from-url`、`azure-image-gen` 和 `wechat-draft` 三个技能；脚本、模板和样式均从安装包定位。
 
-## 手动订阅管理
+## 订阅管理与 OPML 导入
 
 入口为 RSS 阅读页的「设置 → 管理订阅」。可搜索全部来源，表单逐条保存；移除前需要确认。订阅管理读取 OPML 的全部订阅，包括没有文章的源。可手动新增、修改标题／RSS URL／网站 URL／分类和删除订阅；输入分类名即可新建分类或把源移到已有分类。删除仅在 feeds 表停用源，历史文章、评分、正文和已读标记保留；修改 RSS URL 会启用新身份并停用旧身份。最后一个源可以删除，空 OPML 在启动与同步时合法。
 
-`GET /plugin/rss-brief/subscriptions` 返回 `{ok:true,revision,feeds:[{title,xmlUrl,htmlUrl,group}],categories:[string]}`。`POST` 提交 `{action:'add'|'update'|'delete',revision,originalUrl?,feed?}`；add 需要完整 feed，update 需要 originalUrl 和完整 feed，delete 需要 originalUrl。标题和分类须非空、单行，分别最多 300／120 字符；xmlUrl 必须是唯一的绝对 HTTP(S) URL，htmlUrl 可为空；URL 不接受凭据。两个入口均要求已认证 owner，POST 必须为 JSON，请求体上限 8192 字节。成功返回完整新快照与可选 changed；版本冲突返回 409，重复 URL 或非法字段返回 400，非 JSON 类型返回 415。
+「导入 OPML」支持选择最大 1 MiB 的 `.opml` 或 `.xml` 文件。先显示新增、已存在、文件内重复和无效条目的数量，以及有效来源的名称、地址和分类；确认后仅合并新增来源，按规范化 RSS URL 去重，已有来源的名称、分类和相对顺序不变。新来源使用最近的命名父分组，无分组时归入“未分组”。无效条目跳过并计数，XML 结构错误则拒绝整份文件。全重复或没有有效新来源时不写入、不备份。预览只读；确认导入复用订阅保存的备份、分类目录更新及数据库事务，保留历史文章和阅读记录，不自动抓取。订阅版本变化后必须重新预览。
+
+`POST /plugin/rss-brief/subscriptions` 的 `{action:'previewImport',opml}` 返回 `{ok:true,revision,import:{total,added,existing,duplicates,invalid,feeds:[{title,xmlUrl,htmlUrl,group,status:'add'|'existing'}]}}`；确认使用 `{action:'import',opml,revision}`，提交相同 XML 与预览版本，成功返回完整订阅快照、导入统计和 `changed`。原始 XML 限 1 MiB UTF-8，导入 JSON 请求体最多 8 MiB，以容纳转义；Agent 工具的两个同名 action 使用同一逻辑。
+
+`GET /plugin/rss-brief/subscriptions` 返回 `{ok:true,revision,feeds:[{title,xmlUrl,htmlUrl,group}],categories:[string]}`。`POST` 提交 `{action:'add'|'update'|'delete',revision,originalUrl?,feed?}`；add 需要完整 feed，update 需要 originalUrl 和完整 feed，delete 需要 originalUrl。标题和分类须非空、单行，分别最多 300／120 字符；xmlUrl 必须是唯一的绝对 HTTP(S) URL，htmlUrl 可为空；URL 不接受凭据。两个入口均要求已认证 owner，POST 必须为 JSON；单条增改删请求体上限 8192 字节。成功返回完整新快照与可选 changed；版本冲突返回 409，重复 URL 或非法字段返回 400，非 JSON 类型返回 415。
 
 revision 是 OPML 内容的 SHA-256，修改前须使用最新列表返回的版本；冲突后先刷新再重试。保存使用严格 XML 解析，拒绝格式错误的文件；保留其他 outline、已有分类及未修改源的相对顺序。每次实际改动前将原 OPML 保存为同目录下唯一的 `.bak` 文件，并重新生成同目录的 `订阅分类目录.md`（分类、数量、站点和 RSS 链接，保留已有「说明」段落）。写入失败尽力恢复两个文件；备份保留用于人工恢复。保存立即同步本进程的 feeds 表，不启动抓取或模型调用；列表只读，不生成目录或备份。空分类保留，便于再次添加订阅。
 
@@ -137,7 +141,7 @@ OPML → feeds 表
 | `POST /plugin/rss-brief/read` | `{id,read}` 切换已读 |
 | `POST /plugin/rss-brief/read-all` | `{view:"latest",q,category,feed?,tag?,format?,unread,quality,snapshot}` 批量已读；category 无筛选时为 null，feed、tag 和 format 无筛选时省略 |
 | `GET /plugin/rss-brief/subscriptions` | 全部 OPML 订阅、分类和 revision（owner，只读） |
-| `POST /plugin/rss-brief/subscriptions` | `{action,revision,originalUrl?,feed?}` 手动订阅增改删（owner，JSON） |
+| `POST /plugin/rss-brief/subscriptions` | 手动订阅增改删，或 `{action:'previewImport'|'import',opml,revision?}` 预览和合并 OPML（owner，JSON） |
 | `POST /plugin/rss-brief/sync` | 立即抓取 |
 | `GET /plugin/rss-brief/schedule` | 抓取间隔与上次/下次抓取时间；不查询模型清单 |
 | `POST /plugin/rss-brief/schedule` | `{fetchIntervalMinutes:60}` 保存抓取间隔，只接受 5–10080 分钟整数 |
@@ -166,7 +170,7 @@ latest 和 state 的 `latest.sources` 返回全部启用订阅源，格式为 `[
 |---|---|
 | `rss_brief_status` | 源/文章计数、上次/下次抓取、AI 路由和失败源 |
 | `rss_brief_sync` | 立即抓取；`wait:true` 最多等 90 秒，`limit` 仅供测试 |
-| `rss_brief_subscriptions` | `action:list/add/update/delete`；与订阅接口共用操作及 revision，修改保留历史且不抓取 |
+| `rss_brief_subscriptions` | `action:list/add/update/delete/previewImport/import`；与订阅接口共用操作，确认导入使用预览 revision，修改保留历史且不抓取 |
 
 ## 配置与安装
 

@@ -99,4 +99,46 @@ await check('empty state, malformed response, reload failure and unmount cleanup
   invalid.click('重新加载订阅'); await invalid.respond(1, { ok: false, message: 'Owner required' }, 403); assert.match(invalid.text(), /Owner required/); invalid.unmount();
   const pending = harness(); const signal = pending.requests[0].options.signal; pending.unmount(); assert.equal(signal.aborted, true); await pending.respond(0, snapshot());
 });
+const imported = { title: 'Imported & source', xmlUrl: 'https://new.test/rss?a=1&b=2', htmlUrl: '', group: 'New category' };
+const opmlText = '<opml version="2.0"><body><outline text="New category"><outline text="Imported &amp; source" xmlUrl="https://new.test/rss?a=1&amp;b=2"/></outline></body></opml>';
+const preview = (revision = 'r2', added = 1) => ({ ok: true, revision, import: { total: added + 4, added, existing: 2, duplicates: 1, invalid: 1,
+  feeds: [...[alpha, zero].map(feed => ({ ...feed, status: 'existing' })), ...(added ? [{ ...imported, status: 'add' }] : [])] } });
+const chooseFile = async (ui, file = { name: 'feeds.opml', size: opmlText.length, text: async () => opmlText }) => {
+  ui.field('rsb-opml-file').props.onChange({ target: { files: file ? [file] : [], value: 'file' } }); await ui.settle();
+};
+await check('OPML selection previews without saving, then confirms one merged import with the preview revision', async () => {
+  const ui = harness(); await ui.respond(0, snapshot()); ui.click('导入 OPML');
+  assert.equal(ui.field('rsb-opml-file').props.type, 'file'); assert.match(ui.text(), /仅添加新来源/);
+  await chooseFile(ui); assert.deepEqual(JSON.parse(ui.requests[1].options.body), { action: 'previewImport', opml: opmlText }); assert.equal(ui.saved, 0);
+  await ui.respond(1, preview()); assert.match(ui.text(), /新增 1，已存在 2，文件内重复 1，无效 1/); assert.match(ui.text(), /New category/);
+  const confirm = ui.button('导入 1 个新来源'); confirm.props.onClick(); confirm.props.onClick(); ui.render(); assert.equal(ui.requests.length, 3);
+  assert.deepEqual(JSON.parse(ui.requests[2].options.body), { action: 'import', revision: 'r2', opml: opmlText });
+  await ui.respond(2, { ...snapshot('r3', [alpha, zero, imported]), import: preview().import });
+  assert.equal(ui.saved, 1); assert.match(ui.text(), /已导入 1 个新来源/); assert.equal(ui.nodes().some(node => node.props.className === 'rsb-opmlImport'), false); ui.unmount();
+});
+await check('oversized files, invalid previews, duplicate-only files and cancellation never save subscriptions', async () => {
+  const ui = harness(); await ui.respond(0, snapshot()); ui.click('导入 OPML');
+  await chooseFile(ui, { name: 'big.opml', size: 1024 * 1024 + 1, text() { throw new Error('Must not read oversized file'); } });
+  assert.match(ui.text(), /文件超过/); assert.equal(ui.requests.length, 1);
+  await chooseFile(ui); await ui.respond(1, { ok: false, message: 'Malformed OPML' }, 400); assert.match(ui.text(), /Malformed OPML/); assert.equal(ui.saved, 0);
+  ui.click('重新预览'); await ui.respond(2, { ...preview(), import: { ...preview().import, total: 99 } }); assert.match(ui.text(), /无法读取导入预览/);
+  ui.click('重新预览'); await ui.respond(3, preview('r2', 0)); assert.equal(ui.button('导入 0 个新来源').props.disabled, true); assert.match(ui.text(), /没有可新增/);
+  ui.click('取消'); assert.equal(ui.saved, 0); assert.equal(ui.requests.length, 4); assert.equal(ui.nodes().some(node => node.props.className === 'rsb-opmlImport'), false); ui.unmount();
+});
+await check('import conflicts retain the file, invalidate confirmation and require a fresh preview', async () => {
+  const ui = harness(); await ui.respond(0, snapshot()); ui.click('导入 OPML'); await chooseFile(ui); await ui.respond(1, preview());
+  ui.click('导入 1 个新来源'); await ui.respond(2, { ok: false, message: 'stale revision' }, 409);
+  assert.match(ui.text(), /重新预览后再导入/); assert.equal(ui.nodes().some(node => node.type === 'button' && ui.text(node).includes('导入 1 个新来源')), false);
+  ui.click('重新预览'); assert.deepEqual(JSON.parse(ui.requests[3].options.body), { action: 'previewImport', opml: opmlText }); await ui.respond(3, preview('r4'));
+  ui.click('导入 1 个新来源'); assert.equal(JSON.parse(ui.requests[4].options.body).revision, 'r4');
+  ui.requests[4].reject(new Error('Import unavailable')); await ui.settle(); assert.match(ui.text(), /Import unavailable/); assert.equal(ui.saved, 0); assert.equal(ui.requests.length, 5); ui.unmount();
+});
+await check('reload invalidates import previews and late file reads cannot write after unmount', async () => {
+  const ui = harness(); await ui.respond(0, snapshot()); ui.click('导入 OPML'); await chooseFile(ui); await ui.respond(1, preview());
+  ui.click('重新加载订阅'); await ui.respond(2, snapshot('r5'));
+  assert.equal(ui.nodes().some(node => node.type === 'button' && ui.text(node).includes('导入 1 个新来源')), false); assert.ok(ui.button('重新预览')); ui.key('Escape'); assert.equal(ui.closed, 0); ui.unmount();
+  const late = harness(); await late.respond(0, snapshot()); late.click('导入 OPML'); let finish;
+  await chooseFile(late, { name: 'late.opml', size: 20, text: () => new Promise(resolve => { finish = resolve; }) });
+  late.unmount(); finish(opmlText); await late.settle(); assert.equal(late.requests.length, 1);
+});
 console.log(`Passed ${count} offline subscription client checks.`);

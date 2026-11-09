@@ -33,6 +33,21 @@ window.__ModuleLoader__.load({
       "subscriptions.count": "共 {count} 个订阅",
       "subscriptions.search": "搜索订阅名称、地址或分类",
       "subscriptions.add": "添加订阅",
+      "subscriptions.import": "导入 OPML",
+      "subscriptions.importHint": "仅添加新来源；已有订阅的名称和分类保持不变。",
+      "subscriptions.importFile": "选择 OPML 文件",
+      "subscriptions.importSize": "支持 .opml 或 .xml 文件，最大 1 MiB。",
+      "subscriptions.importTooLarge": "文件超过 1 MiB，请拆分后再导入。",
+      "subscriptions.importReading": "正在读取并预览…",
+      "subscriptions.importSummary": "共 {total} 个条目：新增 {added}，已存在 {existing}，文件内重复 {duplicates}，无效 {invalid}。",
+      "subscriptions.importConfirm": "导入 {count} 个新来源",
+      "subscriptions.importPreview": "重新预览",
+      "subscriptions.importConflict": "订阅清单已变化，请重新预览后再导入。",
+      "subscriptions.importAdded": "新增",
+      "subscriptions.importExisting": "已存在",
+      "subscriptions.importNone": "没有可新增的来源。",
+      "subscriptions.importInvalid": "无法读取导入预览，请重试。",
+      "subscriptions.importSuccess": "已导入 {count} 个新来源。点击「立即抓取」获取文章。",
       "subscriptions.edit": "编辑",
       "subscriptions.editTitle": "编辑订阅",
       "subscriptions.delete": "移除订阅",
@@ -336,6 +351,21 @@ window.__ModuleLoader__.load({
       "subscriptions.count": "{count} subscriptions",
       "subscriptions.search": "Search subscription name, address or category",
       "subscriptions.add": "Add subscription",
+      "subscriptions.import": "Import OPML",
+      "subscriptions.importHint": "Add new sources only. Existing subscription names and categories are kept.",
+      "subscriptions.importFile": "Choose an OPML file",
+      "subscriptions.importSize": "Choose an .opml or .xml file up to 1 MiB.",
+      "subscriptions.importTooLarge": "The file exceeds 1 MiB. Split it before importing.",
+      "subscriptions.importReading": "Reading and preparing preview…",
+      "subscriptions.importSummary": "{total} entries: {added} new, {existing} existing, {duplicates} duplicates in the file, {invalid} invalid.",
+      "subscriptions.importConfirm": "Import {count} new sources",
+      "subscriptions.importPreview": "Preview again",
+      "subscriptions.importConflict": "Subscriptions have changed. Preview again before importing.",
+      "subscriptions.importAdded": "New",
+      "subscriptions.importExisting": "Existing",
+      "subscriptions.importNone": "No new sources to import.",
+      "subscriptions.importInvalid": "Unable to read the import preview. Try again.",
+      "subscriptions.importSuccess": "Imported {count} new sources. Choose Fetch now to get their articles.",
       "subscriptions.edit": "Edit",
       "subscriptions.editTitle": "Edit subscription",
       "subscriptions.delete": "Remove subscription",
@@ -1092,7 +1122,17 @@ select.rsb-select { cursor: pointer; }
 /* Subscriptions */
 .rsb-subscriptionsDialog { width: min(760px, 100%); }
 .rsb-subscriptionsBody { min-height: 0; }
-.rsb-subscriptionToolbar { display: flex; align-items: center; gap: 8px; }
+.rsb-subscriptionToolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.rsb-opmlImport { padding: 16px; border: 1px solid var(--rsb-border); border-radius: var(--rsb-radius); background: var(--rsb-surface); }
+.rsb-opmlImport > .rsb-choiceTitle { margin-top: 0; }
+.rsb-opmlImport > .rsb-actions { flex-wrap: wrap; margin-top: 14px; }
+.rsb-opmlFile { display: block; max-width: 100%; margin-top: 6px; color: var(--rsb-fg); font: inherit; font-size: 13px; }
+.rsb-opmlFile::file-selector-button { margin-right: 10px; padding: 6px 10px; border: 1px solid var(--rsb-border); border-radius: var(--rsb-radius-sm); background: var(--rsb-canvas); color: var(--rsb-fg); font: inherit; cursor: pointer; }
+.rsb-opmlName { color: var(--rsb-fg); font-size: 13px; overflow-wrap: anywhere; }
+.rsb-opmlSummary { color: var(--rsb-fg); font-size: 13px; line-height: 1.7; }
+.rsb-opmlPreview { max-height: 280px; margin: 12px 0; padding: 0; overflow-y: auto; list-style: none; scrollbar-width: thin; }
+.rsb-opmlPreview > li { display: flex; align-items: flex-start; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--rsb-divider); }
+.rsb-opmlPreview > li > .rsb-badge { flex: none; margin-top: 2px; }
 .rsb-subscriptionToolbar > input { flex: 1; min-width: 0; }
 .rsb-subscriptionEditor { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 14px; border: 1px solid var(--rsb-border); border-radius: var(--rsb-radius); background: var(--rsb-surface); }
 .rsb-subscriptionEditor > h3, .rsb-subscriptionEditor > .rsb-actions { grid-column: 1 / -1; margin: 0; }
@@ -2454,6 +2494,16 @@ select.rsb-select { cursor: pointer; }
         && body.feeds.every((feed) => feed && ["title", "xmlUrl", "htmlUrl", "group"].every((key) => typeof feed[key] === "string"));
     }
 
+    function validOpmlImport(body) {
+      const value = body?.import;
+      return typeof body?.revision === "string" && value
+        && ["total", "added", "existing", "duplicates", "invalid"].every((key) => Number.isSafeInteger(value[key]) && value[key] >= 0)
+        && value.total === value.added + value.existing + value.duplicates + value.invalid
+        && Array.isArray(value.feeds) && value.feeds.length === value.added + value.existing
+        && value.feeds.every((feed) => feed && ["title", "xmlUrl", "htmlUrl", "group"].every((key) => typeof feed[key] === "string")
+          && ["add", "existing"].includes(feed.status));
+    }
+
     /** Subscription editor is independent of article filters and model catalogs. */
     function SubscriptionSettings({ tr, onClose, onSaved }) {
       const [data, setData] = React.useState(null);
@@ -2464,6 +2514,7 @@ select.rsb-select { cursor: pointer; }
       const [search, setSearch] = React.useState("");
       const [editor, setEditor] = React.useState(null);
       const [removal, setRemoval] = React.useState(null);
+      const [importDraft, setImportDraft] = React.useState(null);
       const request = React.useRef(null);
       const busy = React.useRef(false);
       const dialogRef = React.useRef(null);
@@ -2483,6 +2534,7 @@ select.rsb-select { cursor: pointer; }
           if (controller.signal.aborted) return;
           if (!validSubscriptionSnapshot(body)) throw new Error(tr("subscriptions.invalidResponse"));
           setData(body);
+          setImportDraft((current) => current ? { ...current, preview: null } : null);
         }).catch((cause) => {
           if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : String(cause));
         }).finally(() => {
@@ -2502,6 +2554,7 @@ select.rsb-select { cursor: pointer; }
             if (busy.current) return;
             if (removal !== null) setRemoval(null);
             else if (editor !== null) setEditor(null);
+            else if (importDraft !== null) setImportDraft(null);
             else onClose();
           }
           if (event.key === "Tab" && dialogRef.current) {
@@ -2515,29 +2568,66 @@ select.rsb-select { cursor: pointer; }
         };
         document.addEventListener("keydown", keydown);
         return () => document.removeEventListener("keydown", keydown);
-      }, [onClose, editor, removal]);
+      }, [onClose, editor, removal, importDraft]);
 
       const beginEdit = (feed = null) => {
         setEditor({ originalUrl: feed?.xmlUrl ?? null, feed: feed ? { ...feed } : {
           title: "", xmlUrl: "", htmlUrl: "", group: data.categories[0] ?? tr("subscriptions.ungrouped"),
         } });
-        setRemoval(null); setError(null); setNotice(null);
+        setRemoval(null); setImportDraft(null); setError(null); setNotice(null);
       };
       React.useEffect(() => {
-        if (editor === null && removal === null) return;
+        if (editor === null && removal === null && importDraft === null) return;
         const dialog = dialogRef.current;
         const body = dialog?.querySelector(".rsb-dialogBody");
         if (body) body.scrollTop = 0;
-        dialog?.querySelector(editor !== null ? "#rsb-subscription-title" : ".rsb-subscriptionRemoval button")?.focus();
-      }, [editor?.originalUrl, editor !== null, removal?.xmlUrl]);
+        dialog?.querySelector(editor !== null ? "#rsb-subscription-title"
+          : removal !== null ? ".rsb-subscriptionRemoval button" : "#rsb-opml-file")?.focus();
+      }, [editor?.originalUrl, editor !== null, removal?.xmlUrl, importDraft !== null]);
       const changeField = (key, value) => {
         setEditor((previous) => ({ ...previous, feed: { ...previous.feed, [key]: value } }));
         setError(null); setNotice(null);
       };
+      const previewOpml = async (file = null) => {
+        if (busy.current || loading || data === null || (!file && !importDraft?.opml)) return;
+        setError(null); setNotice(null);
+        if (file && file.size > 1024 * 1024) {
+          setImportDraft({ name: file.name, opml: null, preview: null });
+          setError(tr("subscriptions.importTooLarge")); return;
+        }
+        busy.current = true; setSaving(true);
+        request.current?.abort();
+        const controller = new AbortController(); request.current = controller;
+        const name = file?.name ?? importDraft.name;
+        setImportDraft({ name, opml: null, preview: null });
+        try {
+          const opml = file ? await file.text() : importDraft.opml;
+          if (controller.signal.aborted) return;
+          setImportDraft({ name, opml, preview: null });
+          const response = await fetch(new URL(SUBSCRIPTIONS_ENDPOINT, document.baseURI).href, {
+            method: "POST", signal: controller.signal, credentials: "same-origin",
+            headers: { accept: "application/json", "content-type": "application/json" },
+            body: JSON.stringify({ action: "previewImport", opml }),
+          });
+          const body = await response.json().catch(() => null);
+          if (controller.signal.aborted) return;
+          if (!response.ok || body?.ok !== true) throw new Error(body?.message || body?.error || `HTTP ${response.status}`);
+          if (!validOpmlImport(body)) throw new Error(tr("subscriptions.importInvalid"));
+          setImportDraft({ name, opml, preview: body });
+        } catch (cause) {
+          if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : String(cause));
+        } finally {
+          busy.current = false;
+          if (!controller.signal.aborted) setSaving(false);
+        }
+      };
       const mutate = async (action) => {
         if (busy.current || loading || data === null) return;
         const payload = { action, revision: data.revision };
-        if (action === "delete") payload.originalUrl = removal.xmlUrl;
+        if (action === "import") {
+          if (!importDraft?.preview || importDraft.preview.import.added === 0) return;
+          payload.opml = importDraft.opml; payload.revision = importDraft.preview.revision;
+        } else if (action === "delete") payload.originalUrl = removal.xmlUrl;
         else {
           const feed = Object.fromEntries(Object.entries(editor.feed).map(([key, value]) => [key, value.trim()]));
           if (!feed.title || !feed.xmlUrl || !feed.group) { setError(tr("subscriptions.required")); return; }
@@ -2569,11 +2659,15 @@ select.rsb-select { cursor: pointer; }
           });
           const body = await response.json().catch(() => null);
           if (controller.signal.aborted) return;
-          if (response.status === 409) throw new Error(tr("subscriptions.conflict"));
+          if (response.status === 409) {
+            if (action === "import") setImportDraft((current) => current ? { ...current, preview: null } : null);
+            throw new Error(tr(action === "import" ? "subscriptions.importConflict" : "subscriptions.conflict"));
+          }
           if (!response.ok || body?.ok !== true) throw new Error(body?.message || body?.error || `HTTP ${response.status}`);
-          if (!validSubscriptionSnapshot(body)) throw new Error(tr("subscriptions.invalidResponse"));
-          setData(body); setEditor(null); setRemoval(null);
-          setNotice(tr(action === "delete" ? "subscriptions.removed" : "subscriptions.saved"));
+          if (!validSubscriptionSnapshot(body) || (action === "import" && !validOpmlImport(body))) throw new Error(tr("subscriptions.invalidResponse"));
+          setData(body); setEditor(null); setRemoval(null); setImportDraft(null);
+          setNotice(action === "import" ? tr("subscriptions.importSuccess", { count: body.import.added })
+            : tr(action === "delete" ? "subscriptions.removed" : "subscriptions.saved"));
           onSaved?.();
         } catch (cause) {
           if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : String(cause));
@@ -2586,7 +2680,7 @@ select.rsb-select { cursor: pointer; }
       const fields = [["title", "subscriptions.name", "text", 300], ["xmlUrl", "subscriptions.feedUrl", "url", 2048],
         ["htmlUrl", "subscriptions.homeUrl", "url", 2048], ["group", "subscriptions.group", "text", 120]];
       return h("div", { className: "rsb-overlay", onMouseDown: (event) => {
-        if (event.target === event.currentTarget && !busy.current && editor === null && removal === null) onClose();
+        if (event.target === event.currentTarget && !busy.current && editor === null && removal === null && importDraft === null) onClose();
       } },
         h("div", { className: "rsb-dialog rsb-subscriptionsDialog", role: "dialog", "aria-modal": "true",
           "aria-label": tr("subscriptions.title"), tabIndex: -1, ref: dialogRef },
@@ -2602,11 +2696,43 @@ select.rsb-select { cursor: pointer; }
                 placeholder: tr("subscriptions.search"), onChange: (event) => setSearch(event.target.value) }),
               h("button", { type: "button", className: "rsb-btn rsb-btn--outline", disabled: saving || loading || data === null,
                 onClick: () => beginEdit() }, tr("subscriptions.add")),
+              h("button", { type: "button", className: "rsb-btn rsb-btn--outline", disabled: saving || loading || data === null,
+                onClick: () => { setImportDraft({ name: "", opml: null, preview: null }); setEditor(null); setRemoval(null); setError(null); setNotice(null); } }, tr("subscriptions.import")),
               h("button", { type: "button", className: "rsb-btn rsb-btn--ghost rsb-btn--icon", disabled: saving || loading,
                 title: tr("subscriptions.reload"), "aria-label": tr("subscriptions.reload"), onClick: load }, h(Icon, { name: "refresh", size: 15 }))),
             loading ? h("p", { role: "status", className: "rsb-note" }, tr("settings.loading")) : null,
             error ? h("p", { role: "alert", className: "rsb-dialogError" }, error) : null,
             notice ? h("p", { role: "status", className: "rsb-dialogOk" }, notice) : null,
+            importDraft ? h("section", { className: "rsb-opmlImport", "aria-label": tr("subscriptions.import"), "aria-busy": saving },
+              h("h3", { className: "rsb-choiceTitle" }, tr("subscriptions.import")),
+              h("p", { className: "rsb-choiceHint" }, tr("subscriptions.importHint")),
+              h("label", { className: "rsb-fieldLabel", htmlFor: "rsb-opml-file" }, tr("subscriptions.importFile")),
+              h("input", { id: "rsb-opml-file", type: "file", className: "rsb-opmlFile", accept: ".opml,.xml,application/xml,text/xml,text/x-opml",
+                disabled: saving || loading, "aria-describedby": "rsb-opml-size", onChange: (event) => {
+                  const file = event.target.files?.[0];
+                  if (file) void previewOpml(file);
+                } }),
+              h("p", { id: "rsb-opml-size", className: "rsb-choiceHint" }, tr("subscriptions.importSize")),
+              importDraft.name ? h("p", { className: "rsb-opmlName" }, importDraft.name) : null,
+              saving && !importDraft.preview ? h("p", { role: "status", className: "rsb-note" }, tr("subscriptions.importReading")) : null,
+              importDraft.preview ? h(React.Fragment, null,
+                h("p", { role: "status", className: "rsb-opmlSummary" }, tr("subscriptions.importSummary", importDraft.preview.import)),
+                importDraft.preview.import.added === 0 ? h("p", { className: "rsb-note" }, tr("subscriptions.importNone")) : null,
+                h("ul", { className: "rsb-opmlPreview" }, importDraft.preview.import.feeds.map((feed) => h("li", { key: feed.xmlUrl },
+                  h("span", { className: "rsb-badge" }, tr(feed.status === "add" ? "subscriptions.importAdded" : "subscriptions.importExisting")),
+                  h("span", { className: "rsb-subscriptionInfo" }, h("strong", null, feed.title),
+                    h("span", null, feed.group), h("span", { title: feed.xmlUrl }, feed.xmlUrl)),
+                ))),
+              ) : null,
+              h("div", { className: "rsb-actions" },
+                h("button", { type: "button", className: "rsb-btn rsb-btn--ghost", disabled: saving,
+                  onClick: () => { setImportDraft(null); setError(null); } }, tr("subscriptions.cancel")),
+                importDraft.opml ? h("button", { type: "button", className: "rsb-btn rsb-btn--outline", disabled: saving || loading,
+                  onClick: () => void previewOpml() }, tr("subscriptions.importPreview")) : null,
+                importDraft.preview ? h("button", { type: "button", className: "rsb-btn rsb-btn--outline", disabled: saving || loading || importDraft.preview.import.added === 0,
+                  onClick: () => void mutate("import") }, tr(saving ? "settings.saving" : "subscriptions.importConfirm", { count: importDraft.preview.import.added })) : null,
+              ),
+            ) : null,
             editor ? h("form", { className: "rsb-subscriptionEditor", noValidate: true, "aria-busy": saving,
               onSubmit: (event) => { event.preventDefault(); void mutate(editor.originalUrl === null ? "add" : "update"); } },
               h("h3", { className: "rsb-choiceTitle" }, tr(editor.originalUrl === null ? "subscriptions.add" : "subscriptions.editTitle")),
@@ -2635,7 +2761,7 @@ select.rsb-select { cursor: pointer; }
               h("button", { type: "button", className: "rsb-btn rsb-btn--ghost rsb-btn--sm", disabled: saving || loading,
                 "aria-label": `${tr("subscriptions.edit")} ${feed.title}`, onClick: () => beginEdit(feed) }, tr("subscriptions.edit")),
               h("button", { type: "button", className: "rsb-btn rsb-btn--ghost rsb-btn--sm", disabled: saving || loading,
-                "aria-label": `${tr("subscriptions.delete")} ${feed.title}`, onClick: () => { setRemoval(feed); setEditor(null); setError(null); setNotice(null); } }, tr("subscriptions.delete")),
+                "aria-label": `${tr("subscriptions.delete")} ${feed.title}`, onClick: () => { setRemoval(feed); setEditor(null); setImportDraft(null); setError(null); setNotice(null); } }, tr("subscriptions.delete")),
             ))),
           ),
           h("div", { className: "rsb-dialogFoot" }, h("button", { type: "button", className: "rsb-btn rsb-btn--ghost", disabled: saving, onClick: onClose }, tr("settings.close"))),
