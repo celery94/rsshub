@@ -38,7 +38,7 @@ function mount(config = {}) {
         const payload = JSON.parse(options.messages[0].content[0].text.split('\n')[1]);
         yield { type: 'text-delta', text: JSON.stringify(payload.map(item => item.id === advertorialId
           ? { id: item.id, contentType: 'advertorial', discardReason: '以品牌推广及购买转化为目的，无独立论证。' }
-          : { id: item.id, contentType: 'editorial', dimensions, score: 89, category: 'engineering', relevance: 90, summary: '提供实验结果、约束条件及实现步骤。', reason: '包含具体实验和工程细节，值得阅读并核对适用条件。' })) };
+          : { id: item.id, contentType: 'editorial', tags: ['软件开发', '技术解析'], dimensions, score: 89, category: 'engineering', relevance: 90, summary: '提供实验结果、约束条件及实现步骤。', reason: '包含具体实验和工程细节，值得阅读并核对适用条件。' })) };
         yield { type: 'finish', reason: { kind: 'stop' } };
       } };
     },

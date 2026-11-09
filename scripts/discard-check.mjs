@@ -11,7 +11,7 @@ import { toReportArticle } from "../lib/report.js";
 const NOW = "2026-11-04T08:00:00.000Z";
 let checks = 0;
 async function check(name, run) { await run(); console.log(`ok ${++checks} - ${name}`); }
-const editorial = (id) => ({ id, contentType: "editorial", score: 85,
+const editorial = (id) => ({ id, contentType: "editorial", tags: ["软件开发", "技术解析"], score: 85,
   dimensions: { information: 22, evidence: 22, depth: 17, utility: 16, clarity: 8 },
   summary: "独立测试比较了产品性能、成本与局限。", category: "engineering", relevance: 80, reason: "测量充分，涵盖优缺点。" });
 const ad = (id, contentType = "advertisement") => ({ id, contentType, discardReason: "正文以优惠购买入口为主，缺少独立分析。" });
@@ -111,7 +111,7 @@ try {
       db.prepare("UPDATE articles SET assessment_version=1, assessment_fingerprint='legacy', assessment_current_fingerprint='legacy' WHERE id=?").run(id);
       for (const name of ["discarded_at", "discard_reason", "content_type"]) db.exec(`ALTER TABLE articles DROP COLUMN ${name}`);
       db.exec("PRAGMA user_version=3"); db.close(); db = openDatabase(file);
-      assert.equal(db.prepare("PRAGMA user_version").get().user_version, 4);
+      assert.equal(db.prepare("PRAGMA user_version").get().user_version, 6);
       const row = getArticle(db, id); assert.ok(row); assert.equal(row.assessment_score, 85); assert.equal(row.discarded_at, null);
       assert.equal(toReportArticle(row).assessment.stale, true); assert.equal(toReportArticle(row).assessment.highQuality, false);
       assert.equal(pendingAssessments(db, { now: NOW })[0].id, id); assert.equal(assessmentCounts(db).discarded, 0);

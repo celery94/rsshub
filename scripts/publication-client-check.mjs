@@ -275,4 +275,18 @@ await check("switching during POST or polling aborts fetch and clears timers; cl
   assert.equal(ui.timers.size, 0);
 });
 
+await check("queued tasks show their position, stay locked and keep polling until they run", async () => {
+  const ui = harness(12);
+  await ui.respond(0, { ok: true, task: null });
+  ui.primary().props.onClick(); ui.render();
+  await ui.respond(1, { ok: true, task: task(12, "queued", "evidence", { sessionId: null, queuePosition: 2 }) });
+  assert.ok(ui.text().includes("微信草稿排队中：第 2 位"));
+  assert.equal(ui.primary().props.disabled, true, "a queued task cannot be started again");
+  ui.tick();
+  await ui.respond(2, { ok: true, task: task(12, "running", "writing") });
+  assert.ok(ui.text().includes("创建微信草稿：撰写文章"));
+  assert.equal(ui.timers.size, 1);
+  ui.unmount();
+});
+
 console.log(`Passed ${checks} offline publication client checks and locale parity checks.`);

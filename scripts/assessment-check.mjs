@@ -16,7 +16,7 @@ function valid(id, score = 85) {
     : score === 80 ? { information: 20, evidence: 20, depth: 16, utility: 16, clarity: 8 }
     : score === 60 ? { information: 15, evidence: 15, depth: 12, utility: 12, clarity: 6 }
     : { information: 0, evidence: 0, depth: 0, utility: 0, clarity: 0 };
-  return { id, contentType: "editorial", score, dimensions, summary: "实验测试给出了明确的数据与可复现的方法。", category: "engineering", relevance: 70, reason: "信息具体且证据充分；局限是仅覆盖一种运行环境。" };
+  return { id, contentType: "editorial", tags: ["软件开发", "技术解析"], score, dimensions, summary: "实验测试给出了明确的数据与可复现的方法。", category: "engineering", relevance: 70, reason: "信息具体且证据充分；局限是仅覆盖一种运行环境。" };
 }
 function fixture(db) {
   upsertFeeds(db, [{ xmlUrl: "https://example.test/feed", title: "Engineering", htmlUrl: "https://example.test/", group: "Dev" },
@@ -94,7 +94,7 @@ try {
       db.exec("DROP INDEX idx_articles_assessment");
       for (const column of assessmentColumns) db.exec(`ALTER TABLE articles DROP COLUMN ${column.name}`);
       db.exec("PRAGMA user_version=2"); db.close(); db = openDatabase(file);
-      assert.equal(db.prepare("PRAGMA user_version").get().user_version, 4);
+      assert.equal(db.prepare("PRAGMA user_version").get().user_version, 6);
       assert.equal(getArticle(db, id).summary_zh, "Legacy preserved");
       assert.equal(db.prepare("SELECT read_at FROM reads WHERE article_id=?").get(id).read_at, NOW);
       assert.equal(toReportArticle(getArticle(db, id)).assessment.score, null);

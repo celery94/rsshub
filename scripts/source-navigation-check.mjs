@@ -77,7 +77,7 @@ try {
   check("quality source facets use the same current complete assessment criteria as categories", () => {
     for (const id of [alpha[1], beta[0], news]) {
       setContent(db, id, "ok", "Complete body", null);
-      saveAssessment(db, id, { ...assessmentInput(getArticle(db, id)), status: "ok", contentType: "editorial",
+      saveAssessment(db, id, { ...assessmentInput(getArticle(db, id)), status: "ok", contentType: "editorial", tags: ["软件开发", "技术解析"],
         score: 80, dimensions: { information: 20, evidence: 20, depth: 16, utility: 16, clarity: 8 },
         summary: "Target summary", category: "engineering", relevance: 80, reason: "Detailed evidence", analyzedAt: NOW });
     }

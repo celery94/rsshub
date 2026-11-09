@@ -95,7 +95,7 @@ await check("all loaded pages, unseen cached/reader IDs and late article GETs st
   await ui.respond(4, { ok: true, article: { ...article(1), contentText: "Late body", needsExtraction: false } });
   reader = ui.nodes().find((node) => node.type?.name === "ReaderView"); assert.equal(reader.props.reader.article.read, true); assert.equal(postCount(ui), 1, "late body never auto-marks a second time");
   reader.props.onBack(); ui.render(); assert.equal(ui.rows().length, 4); assert.ok(ui.rows().every((row) => row.props.article.read));
-  ui.tick(); // List polling resumes after leaving the reader.
+  // The visible list refreshes immediately after bulk read, including while the reader is open.
   assert.equal(new URL(getLast(ui).url).searchParams.get("offset"), "0");
   await ui.respond(ui.requests.length - 1, fixture({ ids: [1], snapshot: 101 })); assert.equal(ui.rows()[0].props.article.read, true, "GET overlay also covers previously unseen IDs"); ui.unmount();
 });

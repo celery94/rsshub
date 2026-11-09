@@ -6,6 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createPublicationManager, PublicationError } from "../lib/publication.js";
+import { createTaskQueue } from "../lib/queue.js";
 
 // Fail immediately if this test or an accidentally imported dependency attempts fetch.
 const previousFetch = globalThis.fetch;
@@ -353,6 +354,49 @@ try {
   await check("stale startup lock is conservative and never removed automatically", async () => {
     const f = fixture(); fs.mkdirSync(path.join(f.dataDir, "publications"), { recursive: true }); const lock = path.join(f.dataDir, "publications/17.lock"); fs.writeFileSync(lock, JSON.stringify({ token: "stale" }));
     await rejects(f.manager.start(17), "TASK_LOCKED", 409); assert(fs.existsSync(lock)); assert.equal(f.calls.prompt.length, 0);
+  });
+  const until = async (condition) => { for (let i = 0; i < 200 && !(await condition()); i++) await new Promise(resolve => setTimeout(resolve, 5)); assert.ok(await condition()); };
+  const queued = (f, queue) => { const manager = createPublicationManager({ ...f.args, queue }); fixtures.push({ manager }); return manager; };
+  await check("busy shared queue returns queued, then launches and holds the slot until the Agent ends", async () => {
+    const f = fixture(); const queue = createTaskQueue(); const manager = queued(f, queue);
+    const analysis = queue.enter("analysis"); const releaseAnalysis = await analysis.ready;
+    const waiting = await manager.start(17);
+    assert.equal(waiting.status, "queued"); assert.equal(waiting.queuePosition, 1); assert.equal(waiting.error, null);
+    assert.equal(f.calls.prompt.length, 0, "queued work never creates an Agent");
+    assert.equal((await manager.start(17)).status, "queued"); assert.equal(queue.position("article:17"), 1, "repeat clicks keep one entry");
+    assert.equal((await manager.read(17)).status, "queued");
+    releaseAnalysis();
+    assert.equal((await manager.read(17)).status, "running", "a launch in progress is never reported as missing");
+    await until(async () => f.calls.prompt.length === 1 && (await manager.read(17)).sessionId !== null);
+    assert.equal((await manager.read(17)).status, "running");
+    const next = queue.enter("analysis"); let granted = false; void next.ready.then(() => { granted = true; });
+    await new Promise(resolve => setTimeout(resolve, 20)); assert.equal(granted, false, "a running Agent keeps the slot");
+    const task = await manager.read(17); f.finish(task);
+    await until(() => granted);
+    assert.equal((await manager.read(17)).status, "failed");
+  });
+  await check("queued start failure is reported by queries and a retry queues again", async () => {
+    const f = fixture({ configuration: false }); const queue = createTaskQueue(); const manager = queued(f, queue);
+    const analysis = queue.enter("analysis"); const release = await analysis.ready;
+    assert.equal((await manager.start(17)).status, "queued");
+    release();
+    await until(async () => (await manager.read(17)).status === "failed");
+    const failed = await manager.read(17); assert.equal(failed.error.code, "CONFIG_MISSING");
+    assert.equal(queue.enter("probe").immediate, true, "a failed start releases the slot");
+  });
+  await check("idle shared queue starts immediately and still throws start errors", async () => {
+    const f = fixture({ configuration: false }); const queue = createTaskQueue(); const manager = queued(f, queue);
+    await rejects(manager.start(17), "CONFIG_MISSING", 422);
+    assert.equal(queue.enter("probe").immediate, true);
+    const g = fixture(); const other = queued(g, createTaskQueue());
+    const task = await other.start(17); assert.equal(task.status, "running"); assert.equal(g.calls.prompt.length, 1);
+  });
+  await check("saved drafts and live tasks are reported without joining a busy queue", async () => {
+    const f = fixture(); const task = await f.manager.start(17);
+    const queue = createTaskQueue(); const manager = queued(f, queue); const busy = queue.enter("analysis"); await busy.ready;
+    assert.equal((await manager.start(17)).status, "running"); assert.equal(queue.position("article:17"), 0);
+    f.update(task, { status: "succeeded", stage: "wechat_draft", media_id: "queued-media" });
+    assert.equal((await manager.start(17)).mediaId, "queued-media"); assert.equal(queue.position("article:17"), 0); assert.equal(f.calls.prompt.length, 1);
   });
   console.log(`PASS ${count} offline publication checks; no model, image, WeChat or Agent calls.`);
 } finally {

@@ -12,9 +12,11 @@ import { articleSkillRoot, registerSkills } from "./lib/skills.js";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { createPublicationManager } from "./lib/publication.js";
+import { createTaskQueue } from "./lib/queue.js";
 import { assessArticles } from "./lib/ai.js";
 import { parseBulkReadRequest } from "./lib/bulk-read.js";
 import { CATEGORY_LABELS } from "./lib/categories.js";
+import { normalizeTag, normalizeFormat } from "./lib/tags.js";
 import {
   articleCounts,
   assessmentCounts,
@@ -115,8 +117,11 @@ export function apply(ctx, rawConfig) {
   };
   const controller = new AbortController();
   const articleContent = createArticleContent({ getDb: requireDb, signal: controller.signal, timeoutMs: config.requestTimeoutMs });
+  // Analysis, articles and share posters run one at a time in click order.
+  const taskQueue = createTaskQueue();
   const publicationOptions = {
     ctx,
+    queue: taskQueue,
     workspaceDir: config.articleWorkspace,
     skillRoot: articleSkillRoot,
     dataDir: config.dataDir,
@@ -451,6 +456,10 @@ export function apply(ctx, rawConfig) {
     job.done = 0;
     job.total = candidates.length;
     if (!candidates.length) return { enabled: true, processed: 0, model: `${route.provider}/${route.model}` };
+    const ticket = taskQueue.enter("analysis");
+    if (!ticket.immediate) job.phase = "queued";
+    const release = await ticket.ready;
+    job.phase = "analysis";
     try {
       const outcome = await assessArticles({
         articles: candidates, batchSize: config.aiBatchSize, focus: config.focus,
@@ -474,6 +483,8 @@ export function apply(ctx, rawConfig) {
       setMeta(requireDb(), "analysisLastError", reason);
       for (const article of candidates) saveAssessment(requireDb(), article.id, { status: "failed", error: reason });
       return { enabled: true, processed: candidates.length, failed: candidates.length, error: reason };
+    } finally {
+      release();
     }
   }
 
@@ -985,6 +996,7 @@ export function apply(ctx, rawConfig) {
         return;
       }
       const text = body.contentText;
+      const article = toReportArticle(row, { highQualityThreshold: config.highQualityThreshold });
       writeJson(
         response,
         200,
@@ -1004,7 +1016,10 @@ export function apply(ctx, rawConfig) {
             categoryLabel: CATEGORY_LABELS[row.assessment_category || row.category] ?? null,
             opmlGroup: row.opml_group ?? null,
             relevance: row.assessment_relevance ?? (row.relevance !== null && Number.isFinite(Number(row.relevance)) ? Number(row.relevance) : null),
-            assessment: toReportArticle(row, { highQualityThreshold: config.highQualityThreshold }).assessment,
+            assessment: article.assessment,
+            tags: article.tags,
+            topics: article.topics,
+            format: article.format,
             ...body,
             contentText: text,
             chars: text.replace(/\s+/g, "").length,
@@ -1546,6 +1561,7 @@ export function apply(ctx, rawConfig) {
       state.disposed = true;
       publications.dispose();
       shares.dispose();
+      taskQueue.dispose();
       controller.abort();
       if (state.db !== null) {
         closeDatabase(state.db);
@@ -1760,7 +1776,7 @@ function parseLatestParams(params) {
     }
     return value;
   };
-  for (const name of ["q", "category", "unread", "quality"]) {
+  for (const name of ["q", "category", "unread", "quality", "tag", "format"]) {
     if (params.getAll(name).length > 1) throw new Error(`${name} 不可重复`);
   }
   const category = params.get("category") ?? undefined;
@@ -1777,6 +1793,8 @@ function parseLatestParams(params) {
     snapshot: integer("snapshot", undefined, 0),
     feed: integer("feed", undefined, 1),
     q: params.get("q") ?? "", category, unread: unread === "1", quality,
+    ...(params.has("tag") ? { tag: normalizeTag(params.get("tag")) } : {}),
+    ...(params.has("format") ? { format: normalizeFormat(params.get("format")) } : {}),
   };
 }
 

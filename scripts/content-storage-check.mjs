@@ -82,13 +82,14 @@ try {
 
   check("v1 migration preserves article, read, report, metadata, and indexes", () => {
     db = openDatabase(databasePath);
-    assert.equal(db.prepare("PRAGMA user_version").get().user_version, 4);
+    assert.equal(db.prepare("PRAGMA user_version").get().user_version, 6);
     const columns = new Set(db.prepare("PRAGMA table_info(articles)").all().map((row) => row.name));
     for (const name of newColumns) assert.ok(columns.has(name), name);
     const migrated = db.prepare("SELECT * FROM articles WHERE id = 41").get();
     for (const [name, value] of Object.entries(original)) assert.equal(migrated[name], value, name);
     assert.equal(migrated.feed_content_truncated, 0);
     assert.equal(migrated.content_document_json, null);
+    assert.equal(migrated.tagging_version, null);
     assert.equal(isRead(db, 41), true);
     assert.equal(db.prepare("SELECT read_at FROM reads WHERE article_id = 41").get().read_at, later);
     assert.deepEqual({ ...getReport(db, "2026-11-03") }, originalReport);
@@ -224,10 +225,10 @@ try {
     assert.equal(getArticle(db, id).content_text, "Legacy text setter");
   });
 
-  check("fresh database upgrades to v4 and creates reads in the same schema", () => {
+  check("fresh database upgrades to v6 and creates reads in the same schema", () => {
     const fresh = openDatabase(":memory:");
     try {
-      assert.equal(fresh.prepare("PRAGMA user_version").get().user_version, 4);
+      assert.equal(fresh.prepare("PRAGMA user_version").get().user_version, 6);
       const columns = new Set(fresh.prepare("PRAGMA table_info(articles)").all().map((row) => row.name));
       for (const name of newColumns) assert.ok(columns.has(name), name);
       assert.equal(fresh.prepare("SELECT count(*) AS n FROM reads").get().n, 0);
