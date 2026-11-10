@@ -771,23 +771,30 @@ window.__ModuleLoader__.load({
 .rsb-readerPlaceholder { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 32px; color: var(--rsb-muted); }
 .rsb-readerPlaceholder > .rsb-icon { margin-bottom: 4px; opacity: .45; }
 .rsb-readerPlaceholder .rsb-emptyHint { margin-bottom: 0; }
-.rsb-listPane .rsb-header { padding-inline: 14px; }
-.rsb-listPane .rsb-navRow { gap: 8px; padding: 10px 14px; }
+.rsb-listPane .rsb-header { gap: 10px; min-height: 52px; padding: 8px 10px 8px 16px; border-bottom: 0; }
+.rsb-listPane .rsb-navRow { flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 8px; padding: 0 16px 10px; }
 .rsb-listPane .rsb-search { width: 100%; }
-.rsb-listPane .rsb-navFilters { width: 100%; margin-left: 0; gap: 8px 14px; }
-.rsb-listPane .rsb-tagFilter { flex: 1 1 100px; }
+.rsb-listPane .rsb-navFilters { flex-wrap: wrap; width: 100%; margin-left: 0; gap: 8px; }
+.rsb-listPane .rsb-navFilters > .rsb-switch:first-of-type { margin-left: auto; }
+.rsb-listPane .rsb-navFilters > .rsb-switch { padding-inline: 4px; }
+.rsb-listPane .rsb-tagFilter { flex: 0 1 168px; min-width: 112px; }
 .rsb-listPane .rsb-tagFilter .rsb-select { width: 100%; }
-.rsb-listPane .rsb-listHeading { padding: 10px 14px; gap: 6px; }
-.rsb-listPane .rsb-listTitle { flex: 1; min-width: 0; overflow: hidden; font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
-.rsb-listPane .rsb-listHeading > .rsb-actions { gap: 8px; }
-.rsb-listPane .rsb-listCount { font-size: 11px; }
-.rsb-listPane .rsb-footer { padding-inline: 14px; font-size: 11px; }
+.rsb-listTitle { min-width: 0; margin: 0; overflow: hidden; font-size: 17px; font-weight: 700; line-height: 1.4; text-overflow: ellipsis; white-space: nowrap; }
+.rsb-listPane .rsb-titleRow { flex: 1; align-items: baseline; gap: 10px; }
+.rsb-listPane .rsb-header .rsb-actions { gap: 2px; }
+.rsb-bulkRead { color: var(--rsb-muted); }
+.rsb-bulkRead:hover:not(:disabled) { background: var(--rsb-hover); color: var(--rsb-fg); }
+.rsb-listPane .rsb-listCount { flex: none; font-size: 12px; }
+.rsb-listPane .rsb-select { height: 30px; border-color: transparent; background: var(--rsb-fill); }
+.rsb-listPane .rsb-select:hover:not(:disabled) { border-color: transparent; background: color-mix(in srgb, var(--rsb-fg) 9%, transparent); }
+.rsb-listPane .rsb-content { border-top: 1px solid var(--rsb-border); }
+.rsb-listPane .rsb-footer { justify-content: flex-end; padding: 5px 16px; font-size: 11.5px; }
 .rsb-header { display: flex; align-items: center; justify-content: space-between; flex: none; gap: 16px; min-height: 48px; padding: 6px 20px; border-bottom: 1px solid var(--rsb-border); }
 .rsb-titleRow { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .rsb-titleRow > .rsb-icon { display: none; }
 .rsb-title { margin: 0; font-size: 16px; font-weight: 700; line-height: 1.5; }
 .rsb-actions { display: flex; align-items: center; flex: none; gap: 8px; }
-.rsb-navRow { display: flex; align-items: center; flex: none; flex-wrap: wrap; gap: 8px 12px; padding: 8px 20px; border-bottom: 1px solid var(--rsb-border); }
+.rsb-navRow { display: flex; align-items: center; flex: none; flex-wrap: wrap; gap: 8px 12px; padding: 8px 20px; }
 .rsb-latestHint { color: var(--rsb-muted); font-size: 12.5px; }
 .rsb-navFilters { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 14px; min-width: 0; margin-left: auto; }
 
@@ -834,11 +841,9 @@ select.rsb-select { cursor: pointer; }
 .rsb-content { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; min-height: 0; }
 .rsb-content > .rsb-banner { margin: 12px 20px 0; }
 .rsb-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 0 0 16px; scrollbar-width: thin; }
-.rsb-report > :is(.rsb-banner, .rsb-running, .rsb-warning, .rsb-feedErrors) { margin-left: 20px; margin-right: 20px; }
+.rsb-report > :is(.rsb-banner, .rsb-running, .rsb-warning, .rsb-feedErrors) { margin-left: 16px; margin-right: 16px; }
+.rsb-report > .rsb-warning:first-child { margin-top: 10px; }
 .rsb-report > :is(.rsb-banner, .rsb-running):first-child { margin-top: 14px; }
-.rsb-listHeading { position: sticky; top: 0; z-index: 3; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin: 0; padding: 12px 20px; border-bottom: 1px solid var(--rsb-border); background: color-mix(in srgb, var(--rsb-canvas) 90%, transparent); backdrop-filter: saturate(1.4) blur(10px); }
-.rsb-listHeading > .rsb-actions { flex-wrap: wrap; }
-.rsb-listTitle { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
 .rsb-listCount { color: var(--rsb-muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
 .rsb-section { margin: 0; scroll-margin-top: 16px; }
 .rsb-sectionHead { display: none; }
@@ -896,7 +901,8 @@ select.rsb-select { cursor: pointer; }
 .rsb-progress { height: 3px; border-radius: 3px; background: var(--rsb-fill); overflow: hidden; }
 .rsb-progressBar { height: 100%; background: var(--rsb-accent); transition: width .2s; }
 .rsb-bannerTitle { display: block; margin-bottom: 4px; font-weight: 600; }
-.rsb-warning { margin: 0 0 12px; padding-left: 10px; border-left: 2px solid var(--rsb-border-strong); color: var(--rsb-muted); font-size: 13px; line-height: 1.65; }
+.rsb-warning { display: flex; align-items: flex-start; gap: 7px; margin: 0 0 6px; padding: 7px 10px; border-radius: var(--rsb-radius); background: color-mix(in srgb, #f5a524 9%, transparent); color: var(--rsb-muted); font-size: 12.5px; line-height: 1.55; }
+.rsb-warning > .rsb-icon { margin-top: 2px; color: #d98a00; }
 .rsb-empty { padding: 72px 20px; color: var(--rsb-muted); text-align: center; }
 .rsb-emptyGlyph { display: inline-flex; align-items: center; justify-content: center; width: 72px; height: 72px; margin-bottom: 16px; border-radius: 50%; background: var(--rsb-fill); color: var(--rsb-muted); }
 .rsb-emptyGlyph > .rsb-icon { width: 30px; height: 30px; }
@@ -994,12 +1000,21 @@ select.rsb-select { cursor: pointer; }
 
 .rsb-readerScroll { flex: 1; min-height: 0; overflow-y: auto; padding: 44px clamp(24px, 3.5cqw, 64px) 100px; scroll-behavior: smooth; scrollbar-width: thin; }
 .rsb-reader { max-width: 760px; margin: 0 auto; }
-.rsb-readerTitle { margin: 0 0 14px; font-size: 32px; font-weight: 700; line-height: 1.3; letter-spacing: -.022em; text-wrap: balance; }
-.rsb-reader > .rsb-tags { margin-block: 10px 14px; }
-.rsb-readerMeta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-bottom: 20px; padding-bottom: 18px; border-bottom: 1px solid var(--rsb-border); color: var(--rsb-muted); font-size: 13px; }
-.rsb-readerStatus { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 14px; color: var(--rsb-muted); font-size: 13px; }
-.rsb-readerStatus .rsb-inline { margin-left: auto; }
-.rsb-readerSummary { margin: 0 0 36px; padding: 14px 18px 16px; border-left: 3px solid var(--rsb-accent); border-radius: 0 var(--rsb-radius) var(--rsb-radius) 0; background: color-mix(in srgb, var(--rsb-accent) 5%, var(--rsb-canvas)); }
+.rsb-readerTitle { margin: 0 0 10px; font-size: 30px; font-weight: 700; line-height: 1.3; letter-spacing: -.02em; text-wrap: balance; }
+.rsb-readerTags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 18px; }
+.rsb-readerTags > .rsb-tags { display: contents; }
+.rsb-readerMeta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 0; margin-bottom: 14px; color: var(--rsb-muted); font-size: 13px; }
+.rsb-readerMeta > * + *::before { content: "·"; margin: 0 8px; opacity: .6; }
+.rsb-readerFeed { display: inline-flex; align-items: center; gap: 6px; color: var(--rsb-fg); font-weight: 500; }
+.rsb-readerFeed .rsb-feedIcon { flex-basis: 16px; width: 16px; height: 18px; }
+.rsb-readerFeed .rsb-feedIcon img { width: 16px; height: 16px; }
+.rsb-readerInfo { display: flex; align-items: flex-start; gap: 12px; margin: 0 0 28px; padding: 8px 0; border-block: 1px solid var(--rsb-border); }
+.rsb-readerInfo > .rsb-inline { flex: none; min-height: 28px; font-size: 12.5px; }
+.rsb-readerStatus { display: flex; flex: 1; flex-wrap: wrap; align-items: center; gap: 6px 8px; min-width: 0; color: var(--rsb-muted); font-size: 12.5px; }
+.rsb-readerStatus > .rsb-assessment { flex: 1 1 220px; min-width: 0; margin: 0; }
+.rsb-readerStatus .rsb-assessmentSummary .rsb-meta { gap: 4px 8px; }
+.rsb-readToggleHeader[aria-pressed="true"] { color: var(--rsb-success); }
+.rsb-readerSummary { margin: 0 0 32px; padding: 12px 16px 14px; border-left: 3px solid var(--rsb-accent); border-radius: 0 var(--rsb-radius) var(--rsb-radius) 0; background: color-mix(in srgb, var(--rsb-accent) 5%, var(--rsb-canvas)); }
 .rsb-readerSummary > summary { color: var(--rsb-accent-text); font-size: 12.5px; font-weight: 600; letter-spacing: .02em; cursor: pointer; }
 .rsb-readerSummary[open] > summary { margin-bottom: 8px; }
 .rsb-readerSummaryText { margin: 0; color: color-mix(in srgb, var(--rsb-fg) 88%, transparent); font-size: 15.5px; line-height: 1.85; }
@@ -1200,7 +1215,6 @@ select.rsb-select { cursor: pointer; }
   .rsb-actions { margin-left: auto; }
   .rsb-navRow { padding: 10px 12px; }
   .rsb-search { flex-basis: 100%; }
-  .rsb-listHeading { padding-inline: 12px; }
   .rsb-report > :is(.rsb-banner, .rsb-running, .rsb-warning, .rsb-feedErrors) { margin-inline: 12px; }
   .rsb-item { padding: 12px 12px 12px 26px; }
   .rsb-item::after { left: 26px; right: 12px; }
@@ -1401,6 +1415,15 @@ select.rsb-select { cursor: pointer; }
         ["path", { d: "M4 10a8 8 0 1 1 2.3 5.7" }],
         ["path", { d: "M4 4v6h6" }],
       ],
+      pen: [
+        ["path", { d: "M4 20h4L19 9l-4-4L4 16z" }],
+        ["path", { d: "M13.5 6.5l4 4" }],
+      ],
+      image: [
+        ["rect", { x: 3.5, y: 4.5, width: 17, height: 15, rx: 2 }],
+        ["circle", { cx: 9, cy: 10, r: 1.6 }],
+        ["path", { d: "M20.5 16l-5-5-9 8.5" }],
+      ],
       file: [
         ["path", { d: "M6 3h8l4 4v14H6z" }],
         ["path", { d: "M14 3v4h4M9 12h6M9 16h6" }],
@@ -1456,7 +1479,7 @@ select.rsb-select { cursor: pointer; }
       );
     }
 
-    function AssessmentMeta({ assessment, tr, compact = false }) {
+    function AssessmentMeta({ assessment, tr, compact = false, minutes = true }) {
       const value = assessment ?? { status: "pending" };
       const scored = typeof value.score === "number" && Number.isFinite(value.score);
       if (compact) return h("span", {
@@ -1470,7 +1493,7 @@ select.rsb-select { cursor: pointer; }
         h("span", { className: "rsb-metaItem" }, tr(`assessment.${value.status === "failed" ? "failed" : scored && ["recommended", "optional", "skip"].includes(value.recommendation) ? value.recommendation : "pending"}`)),
         value.provisional ? h("span", { className: "rsb-badge" }, tr("assessment.provisional")) : null,
         value.stale ? h("span", { className: "rsb-badge" }, tr("assessment.stale")) : null,
-        typeof value.minutes === "number" && value.minutes > 0 ? h("span", { className: "rsb-metaItem" },
+        minutes && typeof value.minutes === "number" && value.minutes > 0 ? h("span", { className: "rsb-metaItem" },
           h(Icon, { name: "clock", size: 12 }), tr("reader.minutes", { minutes: value.minutes })) : null,
       );
     }
@@ -1481,7 +1504,7 @@ select.rsb-select { cursor: pointer; }
       return h("section", { className: "rsb-assessment", "aria-label": tr("assessment.title") },
         h("details", { key: `${value.status}:${value.analyzedAt ?? "pending"}`, className: "rsb-details" },
           h("summary", { className: "rsb-assessmentSummary", title: tr("assessment.title") },
-            h("span", { className: "rsb-meta" }, h(AssessmentMeta, { assessment: value, tr })),
+            h("span", { className: "rsb-meta" }, h(AssessmentMeta, { assessment: value, tr, minutes: false })),
             h("span", { className: "rsb-assessmentExpand" }, h(Icon, { name: "chevron-right", size: 13 })),
           ),
           value.reason ? h("p", { className: "rsb-assessmentReason" }, value.reason) : null,
@@ -1774,7 +1797,7 @@ select.rsb-select { cursor: pointer; }
     }
 
     /** Reader-scoped task lifecycle: queries never start work; only an explicit click posts. */
-    function PublicationControl({ id, tr, url, children, kind = "publication", ready = true, extraAction }) {
+    function PublicationControl({ id, tr, url, children, kind = "publication", ready = true, extraAction, leading = null }) {
       const t = (key, params) => tr(key.replace(/^publication\./, `${kind}.`), params);
       const readyRef = React.useRef(ready);
       readyRef.current = ready;
@@ -1856,12 +1879,12 @@ select.rsb-select { cursor: pointer; }
         disabled: locked, title: kind === "share" && !ready ? t("publication.notReady") : buttonLabel, "aria-label": buttonLabel,
         onClick: () => void scopeRef.current?.request(true),
       }, h(Icon, {
-        name: queued ? "clock" : pending !== null || running ? "loader" : task?.status === "succeeded" ? "check" : task?.status === "needs_attention" ? "alert" : "sparkles",
+        name: queued ? "clock" : pending !== null || running ? "loader" : task?.status === "succeeded" ? "check" : task?.status === "needs_attention" ? "alert" : kind === "share" ? "image" : "pen",
         size: 14, spin: pending !== null || running,
       }), buttonLabel);
       return h(React.Fragment, null,
         kind === "share" ? button : h("div", { className: "rsb-readerHeaderInner" }, children,
-          h("div", { className: "rsb-readerHeaderEnd" }, button, extraAction,
+          h("div", { className: "rsb-readerHeaderEnd" }, leading, button, extraAction,
             url ? h("a", { className: "rsb-readerButton", href: url, target: "_blank", rel: "noreferrer noopener", title: tr("reader.original"), "aria-label": tr("reader.original") },
               tr("reader.original"), h(Icon, { name: "external", size: 13 })) : null,
           ),
@@ -2025,66 +2048,32 @@ select.rsb-select { cursor: pointer; }
           React.Fragment,
           null,
           h("h1", { className: "rsb-readerTitle" }, article.title),
-          h(ArticleTags, { tags: article.tags ?? [], topics: article.topics, format: article.format, tr, onSelectTag, onSelectFormat }),
-          h(
-            "div",
-            { className: "rsb-readerMeta" },
-            article.categoryLabel
-              ? h("span", { className: "rsb-readerChip rsb-readerChip--brand" }, article.categoryLabel)
-              : null,
-            h("span", null, article.feed ?? ""),
-            article.publishedAt
-              ? h(
-                  "span",
-                  { className: "rsb-metaItem" },
-                  h(Icon, { name: "calendar", size: 12 }),
-                  tr("reader.at", { date: articleWhen(article) }),
-                )
-              : null,
-            article.relevance !== null && article.relevance !== undefined
-              ? h("span", { className: "rsb-readerChip" }, tr("meta.relevance", { score: article.relevance }))
-              : null,
-            h(
-              "span",
-              { className: "rsb-metaItem" },
-              h(Icon, { name: "clock", size: 12 }),
+          h("div", { className: "rsb-readerMeta" },
+            article.feed ? h("span", { className: "rsb-readerFeed" }, h(FeedIcon, { article }), article.feed) : null,
+            article.publishedAt ? h("time", { dateTime: article.publishedAt, title: article.publishedAt }, articleWhen(article)) : null,
+            h("span", null,
               tr("reader.minutes", { minutes: article.assessment?.minutes || readingMinutes(article.contentText) }),
               /\[视频：\w+ https?:\/\//.test(article.contentText || "") ? ` · ${tr("reader.withVideo")}` : null,
             ),
-            article.id
-              ? h(
-                  "button",
-                  {
-                    type: "button",
-                    className: "rsb-inline rsb-inline--brand",
-                    onClick: () => onToggleRead(article),
-                    disabled: readBusy !== null,
-                    title: article.read ? tr("read.markUnread") : tr("read.markRead"),
-                  },
-                  h(Icon, {
-                    name:
-                      readBusy === article.id
-                        ? "loader"
-                        : article.read
-                          ? "check"
-                          : "circle",
-                    size: 12,
-                    spin: readBusy === article.id,
-                  }),
-                  article.read ? tr("read.markUnread") : tr("read.markRead"),
-                )
-              : null,
           ),
-          h("div", { className: "rsb-readerStatus", role: "status" },
-            h("span", { className: "rsb-readerSource" }, tr(`reader.source.${article.contentSource || "feed-summary"}`)),
-            reader.pending ? h(React.Fragment, null,
-              h(Icon, { name: "loader", size: 13, spin: true }),
-              tr(reader.stage === "cache" ? "reader.cached" : "reader.fetching"),
-            ) : null,
-            h("button", { type: "button", className: "rsb-inline", disabled: reader.pending, onClick: onRetry },
+          article.categoryLabel || (article.tags ?? []).length > 0 ? h("div", { className: "rsb-readerTags" },
+            article.categoryLabel ? h("span", { className: "rsb-readerChip rsb-readerChip--brand" }, article.categoryLabel) : null,
+            h(ArticleTags, { tags: article.tags ?? [], topics: article.topics, format: article.format, tr, onSelectTag, onSelectFormat }),
+          ) : null,
+          h("div", { className: "rsb-readerInfo" },
+            h("div", { className: "rsb-readerStatus", role: "status" },
+              h("span", { className: "rsb-readerSource" }, tr(`reader.source.${article.contentSource || "feed-summary"}`)),
+              article.relevance !== null && article.relevance !== undefined
+                ? h("span", { className: "rsb-readerChip" }, tr("meta.relevance", { score: article.relevance })) : null,
+              reader.pending ? h("span", { className: "rsb-metaItem" },
+                h(Icon, { name: "loader", size: 13, spin: true }),
+                tr(reader.stage === "cache" ? "reader.cached" : "reader.fetching"),
+              ) : null,
+              h(AssessmentDetails, { assessment: article.assessment, tr }),
+            ),
+            h("button", { type: "button", className: "rsb-inline", disabled: reader.pending, onClick: onRetry, title: tr("reader.retry") },
               h(Icon, { name: "retry", size: 13 }), tr("reader.retry")),
           ),
-          h(AssessmentDetails, { assessment: article.assessment, tr }),
           article.summary ? h("details", { key: `${reader.id}:${article.contentSource === "preview"}`, className: "rsb-readerSummary", open: true },
             h("summary", null, tr("reader.summary")),
             h("p", { className: "rsb-readerSummaryText" }, article.summary),
@@ -2150,6 +2139,12 @@ select.rsb-select { cursor: pointer; }
             PublicationControl,
             {
               key: reader.id, id: reader.id, tr, url,
+              leading: article?.id ? h("button", {
+                type: "button", className: "rsb-readerButton rsb-readToggleHeader", "aria-pressed": Boolean(article.read),
+                onClick: () => onToggleRead(article), disabled: readBusy !== null,
+                title: article.read ? tr("read.markUnread") : tr("read.markRead"),
+                "aria-label": article.read ? tr("read.markUnread") : tr("read.markRead"),
+              }, h(Icon, { name: readBusy === article.id ? "loader" : article.read ? "check" : "circle", size: 15, spin: readBusy === article.id })) : null,
               extraAction: h("div", { className: "rsb-shareControl" }, h(PublicationControl, {
                 key: `share:${reader.id}`, id: reader.id, tr, kind: "share", ready: shareArticleReady(reader),
               })),
@@ -3764,7 +3759,7 @@ select.rsb-select { cursor: pointer; }
           null,
           !searching
             ? warnings.map((warning, index) =>
-                h("p", { key: `warning:${index}`, className: "rsb-warning" }, warning),
+                h("p", { key: `warning:${index}`, className: "rsb-warning" }, h(Icon, { name: "alert", size: 13 }), h("span", null, warning)),
               )
             : null,
           sections,
@@ -3805,20 +3800,6 @@ select.rsb-select { cursor: pointer; }
         );
       }
 
-      const directoryTopics = data?.latest?.tagGroups?.topics ?? [];
-      const directoryFormats = data?.latest?.tagGroups?.formats ?? [];
-      const classifiedNames = new Set([...directoryTopics, ...directoryFormats].map((entry) => entry.name.toLowerCase()));
-      const historicalTags = (data?.latest?.tags ?? []).filter((entry) => !classifiedNames.has(entry.name.toLowerCase()));
-      if (selectedTag !== null && !directoryTopics.some((entry) => entry.name === selectedTag) && !historicalTags.some((entry) => entry.name === selectedTag)) {
-        historicalTags.push({ name: selectedTag, count: 0 });
-      }
-      const navigationFormats = selectedFormat !== null && !directoryFormats.some((entry) => entry.name === selectedFormat)
-        ? [...directoryFormats, { name: selectedFormat, count: 0 }] : directoryFormats;
-      const navigationGroups = [
-        ["topics", directoryTopics, selectedTag, selectTag],
-        ["formats", navigationFormats, selectedFormat, selectFormat],
-        ["legacy", historicalTags, selectedTag, selectTag],
-      ].map(([kind, entries, selected, select]) => ({ kind, entries: entries.filter((entry) => entry.count > 0 || entry.name === selected), selected, select }));
       const allArticlesActive = selectedTag === null && selectedFormat === null && selectedCategory === null && selectedFeed === null;
       const categoryIcons = { ai: "sparkles", engineering: "file", systems: "layers", product: "layout", business: "calendar", science: "search", culture: "book", other: "rss" };
       const sidebar = h("aside", { className: "rsb-rail", "aria-label": tr("dashboard.navigate") },
@@ -3843,23 +3824,8 @@ select.rsb-select { cursor: pointer; }
               h("span", { className: "rsb-railLabel" }, tr("dashboard.all")),
               h("span", { className: "rsb-railCount" }, String(data?.latest?.navigation?.total ?? list.totalCount)),
             ),
-            navigationGroups.map(({ kind, entries, selected, select }) => entries.length > 0 ? h("details", {
-              key: kind, className: "rsb-tagNavGroup", open: true, "aria-label": tr(`navigation.${kind}`),
-            },
-              h("summary", { className: "rsb-railTitle" }, tr(`navigation.${kind}`)),
-              entries.map((entry) => h("button", {
-                key: entry.name, type: "button", className: "rsb-railItem rsb-tagNavItem", "data-dimension": kind, "data-name": entry.name,
-                "data-active": String(entry.name === selected), "aria-pressed": entry.name === selected,
-                title: tr("tags.count", { tag: entry.name, count: entry.count }), onClick: () => select(entry.name),
-              },
-                h("span", { className: "rsb-railLabel" }, entry.name),
-                h("span", { className: "rsb-railCount" }, String(entry.count)),
-              )),
-            ) : null),
-            navigationGroups.every((group) => group.entries.length === 0)
-              ? h("p", { className: "rsb-railEmpty" }, tr("navigation.empty")) : null,
           ),
-          h("details", { className: "rsb-sourcesNavigation" },
+          h("details", { className: "rsb-sourcesNavigation", open: true },
             h("summary", null, tr("sources.title")),
             h("nav", { className: "rsb-railList", "aria-label": tr("sources.title") },
               h("button", {
@@ -3944,17 +3910,6 @@ select.rsb-select { cursor: pointer; }
           banner, actionBanner,
           readNotice ? h("div", { className: "rsb-banner", role: "status" }, readNotice) : null,
           runningStrip,
-          report ? h("div", { className: "rsb-listHeading" },
-            h("h2", { className: "rsb-listTitle" }, listLabel),
-            h("div", { className: "rsb-actions" },
-              h("span", { className: "rsb-listCount", role: "status" }, tr("dashboard.results", { visible: visibleArticles.length, total: totalGroups })),
-              h("button", {
-                type: "button", className: "rsb-btn rsb-btn--outline rsb-btn--sm rsb-bulkRead",
-                disabled: !bulkReady || !hasUnreadMatches || readBusy !== null,
-                onClick: () => void markAllRead(),
-              }, tr(readBusy === "bulk" ? "read.allPending" : "read.all")),
-            ),
-          ) : null,
           body,
           latestMatches && data?.pagination?.hasMore ? h("div", { className: "rsb-loadMore" },
             h("button", {
@@ -3982,10 +3937,15 @@ select.rsb-select { cursor: pointer; }
           h("section", { className: "rsb-listPane", "aria-label": tr("view.latest") },
           h("header", { className: "rsb-header" },
             h("div", { className: "rsb-titleRow" },
-              h(Icon, { name: "layout", size: 17 }),
-              h("h1", { className: "rsb-title" }, tr("view.latest")),
+              h("h1", { className: "rsb-listTitle", title: listLabel }, listLabel),
+              report ? h("span", { className: "rsb-listCount", role: "status" }, tr("dashboard.results", { visible: visibleArticles.length, total: totalGroups })) : null,
             ),
             h("div", { className: "rsb-actions" },
+              report ? h("button", {
+                type: "button", className: "rsb-btn rsb-btn--ghost rsb-btn--sm rsb-bulkRead",
+                disabled: !bulkReady || !hasUnreadMatches || readBusy !== null,
+                title: tr("read.all"), onClick: () => void markAllRead(),
+              }, tr(readBusy === "bulk" ? "read.allPending" : "read.all")) : null,
               h("button", {
                 type: "button", className: "rsb-btn rsb-btn--ghost rsb-btn--icon",
                 title: tr("action.refresh"), "aria-label": tr("action.refresh"),
@@ -4000,15 +3960,12 @@ select.rsb-select { cursor: pointer; }
           ),
           h("div", { className: "rsb-navRow" },
             searchControl,
-            h("div", { className: "rsb-navFilters" }, qualitySwitch, readSwitch, classificationFilters),
+            h("div", { className: "rsb-navFilters" }, classificationFilters, readSwitch, qualitySwitch),
           ),
           h("div", { className: "rsb-content" }, content),
-          h("footer", { className: "rsb-footer" },
-            h("span", null, tr("dashboard.results", { visible: visibleArticles.length, total: totalGroups })),
-            data?.schedule?.lastFetchAt
-              ? h("span", null, tr("latest.lastFetch", { time: shortDateTime(data.schedule.lastFetchAt) }))
-              : null,
-          ),
+          data?.schedule?.lastFetchAt ? h("footer", { className: "rsb-footer" },
+            h("span", null, tr("latest.lastFetch", { time: shortDateTime(data.schedule.lastFetchAt) })),
+          ) : null,
           ),
           h(ColumnDivider, { label: tr("layout.readerWidth"), hint: tr("layout.resizeHint"), value: columnWidths.list,
             minimum: 25, maximum: 70, defaultValue: 44, percent: true,
