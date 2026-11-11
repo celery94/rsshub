@@ -23,7 +23,7 @@
 - 图上依次能读到三件事：发生了什么（标题和主画面）、凭什么这么说（1–3 个关键数字、对象或时间，就近标注）、有什么后果或限制（一句短标签）。写不出其中某一项时回到原文核对，不凑内容。
 - 让画面解释关系，标签就近说明对象、数字和条件。按内容选构图，不套固定模板，不堆文字卡片。
 - 区分事实、分析师观点、预测和机制示意；保留“可能”“如果”等限定，不把相关性画成确定因果。
-- 每张含一句与主题相关的逐字原文引语及出处；写明来源站点、“示意”和“AI插画”。完整链接放在文案末尾。
+- 每张含一句与主题相关的逐字原文引语及出处，并写明来源站点；图上不加“示意”“AI插画”“AI生成”之类的说明字样。完整链接放在文案末尾。
 
 ## 3. 出图与文案
 
@@ -35,7 +35,7 @@
 <已验证的Python> <azure-image-gen-dir>/scripts/azure_generate_image.py "<final_prompt>" --size 1536x2048 --skip-post-process --output output/rss-shares/<task_id>/assets/01-cover.png
 ```
 
-全部提示词确定后集中生成，每张最多一次付费调用，不逐张查看后追加生成，不自动重试或付费重绘。全部成品完成后集中验收一次：先遮住文案只看封面，手机尺寸下几秒内应能复述主题句，并说出至少一个关键事实；再核对图中文字、数字、引语、条件和关系，并检查原尺寸显示效果。看不出主题、标题被其他文字或装饰盖过，或发现事实、文字、可读性问题，用 helper fail 记录原因并停止上传。
+全部提示词确定后集中生成，每张最多一次付费调用，不逐张查看后追加生成，不自动重试或付费重绘。图片生成成功后不再看图验收或核对图中文字，直接进入保存草稿；事实核对在第 2 步写提示词之前完成。只有生图命令报错或没有产出文件时，用 helper fail 记录原因并停止。
 
 同时写 caption.txt 与 share.json。文案按下面的顺序写成连贯段落，不用小标题或列表符号：
 
@@ -78,11 +78,10 @@
 node <skill-dir>/scripts/rss-task.mjs --workspace <workspace> --mode rss-share init <输入JSON>
 node <skill-dir>/scripts/rss-task.mjs --workspace <workspace> --mode rss-share preflight
 node <skill-dir>/scripts/rss-task.mjs --workspace <workspace> --mode rss-share stage <task_id> <evidence|writing|images|validation>
-node <skill-dir>/scripts/validate-share.mjs output/rss-shares/<task_id>
 node <skill-dir>/scripts/rss-task.mjs --workspace <workspace> --mode rss-share publish <task_id> --python <已验证的Python解释器>
 ```
 
-校验器与发布桥接负责协议、路径、数量及真实图片解码检查，不再人工重复实现；校验通过且成品验收合格后保存草稿。失败使用：
+图片和文案写好后直接执行 publish，不另跑校验器，也不做人工验收。publish 内部会自动检查清单协议、路径、数量和图片能否解码；它报 `VALIDATION_FAILED` 时，再运行 `node <skill-dir>/scripts/validate-share.mjs output/rss-shares/<task_id>` 查看具体原因并修正清单或文案。失败使用：
 
 ```text
 node <skill-dir>/scripts/rss-task.mjs --workspace <workspace> --mode rss-share fail <task_id> <错误码> <具体原因>
@@ -90,6 +89,6 @@ node <skill-dir>/scripts/rss-task.mjs --workspace <workspace> --mode rss-share f
 
 publish 仅保存草稿，必须经 helper，不直接调用微信 CLI。用户点击分享按钮即已授权，无需再次确认。article_type 必须为 newspic，image_count 为 1–3 且与清单及实际图片一致，第一张为封面。
 
-以 result.json 中 `status=succeeded` 且实际非空 `media_id` 确认成功，stage 保留 wechat_draft，不新增 publish 字段。结果未知时停止，不自动重建、清锁或改任务 ID；已有成功与历史 publish* 字段只读保留。只出图任务止于本地验收与校验，不执行微信预检或 publish。
+以 result.json 中 `status=succeeded` 且实际非空 `media_id` 确认成功，stage 保留 wechat_draft，不新增 publish 字段。结果未知时停止，不自动重建、清锁或改任务 ID；已有成功与历史 publish* 字段只读保留。只出图任务止于图片和文案写入任务目录，不执行微信预检或 publish。
 
 最终简报：草稿是否保存、task_id、图片/文案/result.json 路径与实际 media_id；失败说明原因。无需重载插件，不执行 Git 操作。
