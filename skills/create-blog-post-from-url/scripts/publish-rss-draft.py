@@ -173,7 +173,7 @@ def validate_legacy_share(task_dir, result, title, source, workspace, manifest, 
     caption = contained(task_dir / "caption.txt", task_dir).read_text(encoding="utf-8-sig").strip()
     suffix = "来源：" + source
     body = caption[:-len(suffix)].strip() if caption.endswith("\n" + suffix) else ""
-    if manifest["title"] != title or manifest["source"] != source or manifest["caption"].strip() != caption or not 100 <= len(re.sub(r"\s", "", body)) <= 200 or not re.search(r"[\u3400-\u9fff]", body) or re.search(r"<[^>]*>|!\[[^\]]*\]\(", caption):
+    if manifest["title"] != title or manifest["source"] != source or manifest["caption"].strip() != caption or not 100 <= len(re.sub(r"\s", "", body)) <= 300 or not re.search(r"[\u3400-\u9fff]", body) or re.search(r"<[^>]*>|!\[[^\]]*\]\(", caption):
         fail("INVALID_SHARE", "Share caption or source does not match its validated input.")
     if manifest["poster"] not in ("./assets/01-poster.png", "./assets/01-poster.jpg"):
         fail("INVALID_SHARE", "Invalid poster path.")

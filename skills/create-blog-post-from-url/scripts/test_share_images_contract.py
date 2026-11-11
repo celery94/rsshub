@@ -84,6 +84,16 @@ class ContractTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     validate_images_manifest(data, source=SOURCE, cached_content=CACHED)
 
+    def test_caption_body_accepts_100_to_300_characters(self):
+        for length, valid in ((99, False), (100, True), (300, True), (301, False)):
+            data = {**manifest(), 'caption': '文' * length + '\n来源：' + SOURCE}
+            with self.subTest(length=length):
+                if valid:
+                    validate_images_manifest(data, source=SOURCE, cached_content=CACHED)
+                else:
+                    with self.assertRaises(ValueError):
+                        validate_images_manifest(data, source=SOURCE, cached_content=CACHED)
+
     def test_rejects_caption_source_and_title_problems(self):
         for change in (
             {'caption': CAPTION + '\n来源：https://other.example/'},

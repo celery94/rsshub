@@ -166,7 +166,7 @@ function validateCaption(caption, source) {
   if (typeof caption !== 'string' || !caption.endsWith(`\n${suffix}`)) throw new Error('Caption must end with a separate 来源：source URL line.');
   const body = caption.slice(0, -suffix.length).trim();
   const length = count(body.replace(/\s/g, ''));
-  if (length < 100 || length > 200 || !HAN.test(body) || /<[^>]*>|!\[[^\]]*\]\(/.test(caption)) throw new Error('Caption requires 100–200 characters of Chinese plain text, plus its source line.');
+  if (length < 100 || length > 300 || !HAN.test(body) || /<[^>]*>|!\[[^\]]*\]\(/.test(caption)) throw new Error('Caption requires 100–300 characters of Chinese plain text, plus its source line.');
 }
 
 export function validateKeyPoints(points, required = false, present = points !== undefined) {

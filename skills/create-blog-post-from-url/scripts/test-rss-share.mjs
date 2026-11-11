@@ -53,7 +53,7 @@ test('share success persists exact paths, single image and idempotent result',as
   assert.equal(result.poster_path,result.cover_path); assert.equal(result.article_path,result.caption_path); assert.deepEqual(result.inline_image_paths,[]);
   assert.deepEqual(await f.runner.publish('share-1','offline-python'),result); assert.equal(calls,1);
 });
-for (const [name,change] of [['long title',{title:'长'.repeat(33)}],['long headline',{headline:'长'.repeat(25)}],['long subtitle',{subtitle:'长'.repeat(41)}],['source mismatch',{source:'https://other.example/'}],['short caption',{caption:`短句\n来源：${source}`}],['long caption',{caption:`${'长'.repeat(201)}\n来源：${source}`}],['source absent',{caption}],['encoded path',{poster:'./assets/%30%31-poster.png'}],['traversal',{poster:'../outside.png'}],['remote image',{poster:'https://example.com/a.png'}]]) test(`share rejects ${name} before bridge`,async t=>{
+for (const [name,change] of [['long title',{title:'长'.repeat(33)}],['long headline',{headline:'长'.repeat(25)}],['long subtitle',{subtitle:'长'.repeat(41)}],['source mismatch',{source:'https://other.example/'}],['short caption',{caption:`短句\n来源：${source}`}],['long caption',{caption:`${'长'.repeat(301)}\n来源：${source}`}],['source absent',{caption}],['encoded path',{poster:'./assets/%30%31-poster.png'}],['traversal',{poster:'../outside.png'}],['remote image',{poster:'https://example.com/a.png'}]]) test(`share rejects ${name} before bridge`,async t=>{
   const f=fixture(t); await f.runner.init(f.file); f.artifacts(change);
   assert.ok(validateShare(f.dir,{source}).length);
   assert.equal((await f.runner.publish('share-1','offline-python')).error.code,'VALIDATION_FAILED');

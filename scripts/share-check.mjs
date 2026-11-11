@@ -72,7 +72,7 @@ try {
       assert.equal(shareInput.mode,'rss-share');assert.equal(shareInput.poster_layout,'editorial');assert.equal(shareInput.cached_content,'完整原文及证据');
       const newsInput=JSON.parse(fs.readFileSync(path.join(f.workspace,'output/rss-articles',news.taskId,'input.json'),'utf8'));assert.equal(Object.hasOwn(newsInput,'poster_layout'),false);
       const prompt=f.calls.prompt[0].content[0].text;
-      for(const text of ['references/rss-share-workflow.md','--mode rss-share','--skip-post-process','newspic','不再请求确认','key_points','新任务使用images清单','在图里把事情说清楚，文字作为补充','一次策划、一轮集中生成、一次集中验收','不自动付费重绘','image_count须为1–3','一次直接生成含全部文字的完整海报','不生成无文字底图'])assert.ok(prompt.includes(text),text);
+      for(const text of ['references/rss-share-workflow.md','--mode rss-share','--skip-post-process','newspic','不再请求确认','key_points','新任务使用images清单','150–300字','单看图就能说出事情大概','写明发布方或作者及日期','一次策划、一轮集中生成、一次集中验收','不自动付费重绘','image_count须为1–3','一次直接生成含全部文字的完整海报','不生成无文字底图'])assert.ok(prompt.includes(text),text);
       assert.doesNotMatch(prompt,/无文字高清原图|本地排版脚本|render-share-poster\.py|主体集中于中部偏下|2–5个信息块|comparison|insight|steps|image_count为1。/);
       assert.match(prompt,/仅保存公众号图片消息草稿/);assert.match(prompt,/不提交发布/);assert.match(prompt,/不重启或重载插件/);assert.match(prompt,/实际非空media_id和status=succeeded/);assert.doesNotMatch(prompt,/默认提交发布|freepublish|publish_id|publish_status=submitted/);
       assert.equal((await f.manager.start(17)).sessionId,share.sessionId);assert.equal(f.calls.create,2);

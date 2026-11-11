@@ -98,6 +98,14 @@ test('multi-image manifest rejects structural and content violations', t => {
   }
 });
 
+test('caption body accepts 100–300 characters', t => {
+  for (const [length, valid] of [[99, false], [100, true], [300, true], [301, false]]) {
+    const f = fixture(t);
+    f.artifacts({...manifest(), caption: `${'文'.repeat(length)}\n来源：${source}`});
+    assert.equal(validateShare(f.dir, {source}).length === 0, valid, `${length} characters`);
+  }
+});
+
 test('multi-image manifest requires listed assets and source images', t => {
   const f = fixture(t);
   f.artifacts();

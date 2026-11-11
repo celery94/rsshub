@@ -191,8 +191,8 @@ def validate_caption(caption, source):
         raise ValueError("Caption must end with a separate 来源：source URL line.")
     body = caption[: -len(suffix)].strip()
     count = len(re.sub(r"\s", "", body))
-    if not 100 <= count <= 200 or not HAN.search(body) or re.search(r"<[^>]*>|!\[[^\]]*\]\(", caption):
-        raise ValueError("Caption requires 100–200 characters of Chinese plain text, plus its source line.")
+    if not 100 <= count <= 300 or not HAN.search(body) or re.search(r"<[^>]*>|!\[[^\]]*\]\(", caption):
+        raise ValueError("Caption requires 100–300 characters of Chinese plain text, plus its source line.")
     return count
 
 
