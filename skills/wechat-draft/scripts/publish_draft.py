@@ -825,10 +825,10 @@ def detect_content_format(args: argparse.Namespace, source_path: Optional[str]) 
 
 
 def normalize_plain_text(text: str) -> str:
-    """将文本收敛为适合图片消息的纯文本。"""
+    """清理图片消息的行内空白，保留换行和段落间距。"""
     text = text.replace("\r\n", "\n").replace("\r", "\n")
-    lines = [line.strip() for line in text.split("\n") if line.strip()]
-    return re.sub(r"\s+", " ", "\n".join(lines)).strip()
+    lines = [re.sub(r"[^\S\n]+", " ", line).strip() for line in text.split("\n")]
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()
 
 
 def collect_newspic_image_paths(args: argparse.Namespace) -> List[str]:

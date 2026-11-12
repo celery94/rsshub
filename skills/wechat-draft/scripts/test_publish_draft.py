@@ -90,6 +90,32 @@ class ValidateArgsTests(unittest.TestCase):
             )
 
 
+class NewspicTextTests(unittest.TestCase):
+    def test_normalization_preserves_line_and_paragraph_breaks(self):
+        for newline in ("\n", "\r\n", "\r"):
+            with self.subTest(newline=repr(newline)):
+                content = newline.join([
+                    "", "  事件与出处。  ", "", "", " \t ",
+                    "主要\t  细节。", "保留条件与局限。", "",
+                    "来源：https://example.com/article", "",
+                ])
+                self.assertEqual(
+                    publish_draft.normalize_plain_text(content),
+                    "事件与出处。\n\n主要 细节。\n保留条件与局限。\n\n来源：https://example.com/article",
+                )
+
+    @patch("publish_draft.upload_newspic_image", return_value="image-id")
+    @patch("publish_draft.collect_newspic_image_paths", return_value=["card.png"])
+    @patch("publish_draft.os.path.exists", return_value=True)
+    def test_newspic_payload_keeps_caption_paragraphs_and_source_line(self, _exists, _collect, _upload):
+        caption = "事件与出处。\n\n主要细节与限制。\n\n来源：https://example.com/article"
+        article = publish_draft.build_newspic_article(
+            make_args(article_type="newspic", content=caption, content_format="auto", image=["card.png"]),
+            "token",
+        )
+        self.assertEqual(article["content"], caption)
+
+
 class ArticlePayloadTests(unittest.TestCase):
     @patch("publish_draft.prepare_content", return_value="<p>正文</p>")
     def test_news_payload(self, _prepare_content):

@@ -100,7 +100,7 @@ Python 环境需要生图脚本的 `requests`、`Pillow`，以及微信脚本使
 
 ### 2. 取证与写作
 
-先读取 `source-and-writing.md` 与 `chinese-style-and-deai.md`。浏览完整原文，核对缓存正文的完整性和来源；保存作者、日期、章节、2–4 个可追溯原文锚点与必要官方核对到 `source-notes.md`。原文不可访问且没有可信完整缓存时，使用 `SOURCE_INCOMPLETE` 失败，不根据标题或 RSS 摘要编写文章。
+先读取 `source-and-writing.md` 与 `chinese-style-and-deai.md`，按共用说明的「内容使用与按需核查」先检查任务输入、`cached_content` 和本任务已有证据笔记。完整、来源清楚且足以支持结论的内容直接复用，不重复打开原文。保存或补充作者、日期、章节和 2–4 个可追溯原文锚点到 `source-notes.md`；仅有具体缺口时才调用可用的相关技能定向补查，记录补充来源与结果。补查后仍没有可信完整原文时，使用 `SOURCE_INCOMPLETE` 失败，不根据标题或 RSS 摘要编写文章。
 
 ```text
 node <skill-dir>/scripts/rss-task.mjs --workspace <workspace> stage <task_id> writing
@@ -110,7 +110,7 @@ node <skill-dir>/scripts/rss-task.mjs --workspace <workspace> stage <task_id> wr
 
 进入配图前把正文改完。标题链、开头、去 AI 味改稿和禁用句式检查都在本阶段收尾；`stage images` 之后不再修改正文，确需改动时先回退到本阶段重改，再重跑校验。
 
-官方核对只针对会影响结论且可能变化的事实：价格、版本、接口、产品能力、争议数据。原文完整时，地名、线路、历史时间线等稳定信息按原文归属，不必逐条再抓官网；核对新增来源才写入 `## 参考`。
+先用已有材料核对拟采用的事实。会影响结论的价格、版本、接口、产品能力、争议数据等，只有在已有材料无法支持本次所需信息、存在冲突或时效疑点时才补查官方资料；已有适用核查结果直接复用。地名、线路、历史时间线等稳定信息按原文归属，不必逐条再抓官网；正文实际使用的补充来源才写入 `## 参考`。
 
 ### 3. 配图
 
