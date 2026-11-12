@@ -53,10 +53,12 @@ test('share success persists exact paths, single image and idempotent result',as
   assert.equal(result.poster_path,result.cover_path); assert.equal(result.article_path,result.caption_path); assert.deepEqual(result.inline_image_paths,[]);
   assert.deepEqual(await f.runner.publish('share-1','offline-python'),result); assert.equal(calls,1);
 });
-for (const [name,change] of [['long title',{title:'长'.repeat(33)}],['long headline',{headline:'长'.repeat(25)}],['long subtitle',{subtitle:'长'.repeat(41)}],['source mismatch',{source:'https://other.example/'}],['short caption',{caption:`短句\n来源：${source}`}],['long caption',{caption:`${'长'.repeat(301)}\n来源：${source}`}],['source absent',{caption}],['encoded path',{poster:'./assets/%30%31-poster.png'}],['traversal',{poster:'../outside.png'}],['remote image',{poster:'https://example.com/a.png'}]]) test(`share rejects ${name} before bridge`,async t=>{
+for (const [name,change] of [['long title',{title:'长'.repeat(33)}],['long headline',{headline:'长'.repeat(25)}],['long subtitle',{subtitle:'长'.repeat(41)}],['source mismatch',{source:'https://other.example/'}],['short caption',{caption:`短句\n来源：${source}`}],['long caption',{caption:`${'长'.repeat(301)}\n来源：${source}`}],['source absent',{caption}],['encoded path',{poster:'./assets/%30%31-poster.png'}],['traversal',{poster:'../outside.png'}],['remote image',{poster:'https://example.com/a.png'}]]) test(`offline validator reports ${name}; upload only enforces required inputs`,async t=>{
   const f=fixture(t); await f.runner.init(f.file); f.artifacts(change);
   assert.ok(validateShare(f.dir,{source}).length);
-  assert.equal((await f.runner.publish('share-1','offline-python')).error.code,'VALIDATION_FAILED');
+  if (['long title','source mismatch','encoded path','traversal','remote image'].includes(name)) {
+    assert.equal((await f.runner.publish('share-1','offline-python')).error.code,'INVALID_SHARE');
+  }
 });
 test('extra or missing images and mismatched caption fail',async t=>{
   const f=fixture(t); await f.runner.init(f.file); f.artifacts();
@@ -70,6 +72,23 @@ test('share rejects symlink directory even when target is inside task',async t=>
   const assets=path.join(f.dir,'assets'); const target=path.join(f.dir,'actual-assets'); fs.renameSync(assets,target);
   fs.symlinkSync(target,assets,process.platform==='win32'?'junction':'dir');
   assert.ok(validateShare(f.dir).length);
+});
+test('share saves directly without editorial validation or cached quote matching', async t => {
+  let calls = 0;
+  const f = fixture(t, request => {
+    calls++;
+    assert.equal(f.state().stage, 'wechat_draft');
+    assert.equal(request.image_count, 1);
+    f.update({status:'succeeded', media_id:'direct-draft', error:null});
+    return {status:0};
+  });
+  await f.runner.init(f.file);
+  f.artifacts({caption:'已在生成前核对的简短说明', images:[{file:'./assets/01-poster.png', blocks:[{type:'quote', text:'Quote from the full article, absent from RSS cache.'}]}]});
+  assert.ok(validateShare(f.dir).length);
+  const result = await f.runner.publish('share-1', 'offline-python');
+  assert.equal(result.status, 'succeeded');
+  assert.equal(result.media_id, 'direct-draft');
+  assert.equal(calls, 1);
 });
 for (const outcome of ['unknown','safe-retry','durable-success']) test(`share ${outcome} retains submission protections`,async t=>{
   let calls=0;

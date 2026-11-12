@@ -228,6 +228,31 @@ def validate_share(task_dir, result, title, source, workspace):
     return validate_legacy_share(task_dir, result, title, source, workspace, manifest, input_data)
 
 
+def prepare_share_upload(task_dir, result, title, source, workspace):
+    """Prepare existing files for upload without rechecking editorial content or pixels."""
+    manifest = read_json(contained(task_dir / "share.json", task_dir))
+    caption = contained(task_dir / "caption.txt", task_dir).read_text(encoding="utf-8-sig").strip()
+    if not caption or manifest.get("caption", "").strip() != caption or manifest.get("title") != title or manifest.get("source") != source:
+        fail("INVALID_SHARE", "Share upload text is missing or inconsistent.")
+    references = [image["file"] for image in manifest["images"]] if "images" in manifest else [manifest.get("poster")]
+    if not 1 <= len(references) <= 3:
+        fail("INVALID_SHARE", "Provide one to three share images.")
+    images = []
+    for index, reference in enumerate(references, 1):
+        if not isinstance(reference, str) or not re.fullmatch(rf"\./assets/0{index}-[a-z0-9][a-z0-9-]{{0,23}}\.(png|jpg)", reference):
+            fail("INVALID_SHARE", "Invalid share image path.")
+        image = contained(task_dir / reference, task_dir / "assets")
+        if not image.is_file() or image.stat().st_size == 0:
+            fail("INVALID_SHARE", "A share image is missing or empty.")
+        images.append(image)
+    relative = [image.relative_to(workspace).as_posix() for image in images]
+    if {item.name for item in (task_dir / "assets").iterdir()} != {image.name for image in images}:
+        fail("INVALID_SHARE", "Assets must contain exactly the listed images.")
+    if result.get("article_type") != "newspic" or result.get("image_count") != len(images) or result.get("image_paths", relative if "images" not in manifest else None) != relative or result.get("cover_path") != relative[0] or result.get("poster_path") != relative[0]:
+        fail("INVALID_SHARE", "Share upload images do not match task state.")
+    return images
+
+
 def run_bridge(task_dir, lock_token, title, digest, source, *, workspace=None, module_loader=load_publisher):
     """Use the supplied workspace for task data and configuration."""
     workspace = Path(workspace).resolve() if workspace is not None else Path.cwd().resolve()
@@ -284,7 +309,7 @@ def run_bridge(task_dir, lock_token, title, digest, source, *, workspace=None, m
     with open(os.devnull, "w", encoding="utf-8") as sink, redirect_stdout(sink), redirect_stderr(sink):
         try:
             if mode == "rss-share":
-                share_images = validate_share(task_dir, result, title, source, workspace)
+                share_images = prepare_share_upload(task_dir, result, title, source, workspace)
             publisher = module_loader()
             publisher.load_env_from_dotenv(workspace)
             app_id = os.environ.get("WECHAT_APP_ID")

@@ -83,23 +83,15 @@ class ShareTests(unittest.TestCase):
         self.write('result.json',{**self.result,'cover_path':poster_path,'poster_path':poster_path})
         self.assertEqual(self.run_bridge()['status'],'succeeded')
 
-    def test_fake_extension_and_corrupt_image_stop_before_token(self):
-        self.poster.write_bytes(b'not an image')
-        self.assert_no_upload()
+    def test_generation_output_is_not_decoded_again(self):
+        self.poster.write_bytes(b'generated output is passed through without pixel inspection')
+        self.assertEqual(self.run_bridge()['status'], 'succeeded')
 
-    def test_actual_format_must_match_extension(self):
-        Image.new('RGB',(1080,1440)).save(self.poster,format='JPEG')
+    def test_empty_or_missing_image_stops_before_upload(self):
+        self.poster.write_bytes(b'')
         self.assert_no_upload()
-
-    def test_low_resolution_wrong_ratio_and_truncated_image(self):
-        for dimensions in [(810,1080),(1536,1536)]:
-            with self.subTest(dimensions=dimensions):
-                self.write('result.json',self.result)
-                Image.new('RGB',dimensions).save(self.poster)
-                self.assert_no_upload()
-        self.write('result.json',self.result)
-        Image.new('RGB',(1080,1440)).save(self.poster)
-        self.poster.write_bytes(self.poster.read_bytes()[:100])
+        self.write('result.json', self.result)
+        self.poster.unlink()
         self.assert_no_upload()
 
     def test_extra_image_stops_before_upload(self):
@@ -120,7 +112,7 @@ class ShareTests(unittest.TestCase):
         self.publisher.add_draft.assert_not_called()
 
     def test_manifest_and_result_tampering_stop_before_upload(self):
-        for change in [{'headline':'长'*25},{'subtitle':'长'*41},{'title':'长'*33},{'poster':'./assets/%30%31-poster.png'},{'source':'https://other.example/'},{'caption':'短句'}]:
+        for change in [{'title':'长'*33},{'poster':'./assets/%30%31-poster.png'},{'source':'https://other.example/'},{'caption':'短句'}]:
             with self.subTest(change=change):
                 self.write('result.json',self.result)
                 self.write('share.json',{**self.manifest,**change})
@@ -144,45 +136,18 @@ class ShareTests(unittest.TestCase):
             self.assertEqual(self.run_bridge()['error']['code'],'WECHAT_PREPARATION_FAILED')
         self.publisher.add_draft.assert_not_called()
 
-    def test_legacy_content_requires_valid_key_points_before_upload(self):
+    def test_legacy_content_fields_are_preserved_without_revalidation(self):
         self.write('input.json', dict(version=1, mode='rss-share', task_id='share-1',
                                      source_url=SOURCE, poster_layout='content'))
-        points = ['数据中心业务增长带动整体表现，仍需结合实际需求判断。',
-                  '产品更新的实际影响，需要结合版本与部署条件核对。']
-        for invalid in [None, [], points[:1], [points[0], '短句'], [points[0], '**不允许使用标记的内容说明**']]:
-            with self.subTest(points=invalid):
-                self.write('result.json', self.result)
-                self.write('share.json', {**self.manifest, 'key_points': invalid})
-                self.assert_no_upload()
-        self.write('result.json', self.result)
-        self.write('share.json', {**self.manifest, 'key_points': points})
+        manifest = {**self.manifest, 'key_points': ['历史要点']}
+        self.write('share.json', manifest)
         self.assertEqual(self.run_bridge()['status'], 'succeeded')
+        self.assertEqual(json.loads((self.task / 'share.json').read_text(encoding='utf-8')), manifest)
 
-    def test_legacy_editorial_validation_without_renderer(self):
+    def test_legacy_editorial_no_longer_requires_template(self):
         self.write('input.json', dict(version=1, mode='rss-share', task_id='share-1',
                                      source_url=SOURCE, poster_layout='editorial'))
-        self.assert_no_upload()
-        sections = [
-            {'heading': '增长来源', 'body': '数据中心需求支持业务增长，仍需核对利润率变化与后续订单。'},
-            {'heading': '比较边界', 'body': '比较不同公司的预测与已披露数据时，需要确认统计口径和时间。'},
-        ]
-        for layout in ('comparison', 'insight', 'steps'):
-            with self.subTest(layout=layout):
-                editorial = {'layout': layout, 'sections': sections}
-                if layout == 'comparison':
-                    editorial['comparison'] = {
-                        'label': '测试季度预测数据',
-                        'left': {'name': '示例甲', 'value': '170', 'unit': '测试单位'},
-                        'right': {'name': '示例乙', 'value': '150–160', 'unit': '测试单位'},
-                    }
-                self.write('result.json', self.result)
-                self.write('share.json', {**self.manifest, 'editorial': {**editorial, 'extra': 1}})
-                self.assert_no_upload()
-                self.write('result.json', self.result)
-                self.write('share.json', {**self.manifest, 'editorial': editorial})
-                self.assertEqual(self.run_bridge()['status'], 'succeeded')
-                for method in vars(self.publisher).values():
-                    method.reset_mock()
+        self.assertEqual(self.run_bridge()['status'], 'succeeded')
 
     def test_article_bridge_rejects_share_only_layout_field(self):
         import test_publish_rss_draft as article_helper

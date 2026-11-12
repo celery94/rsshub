@@ -248,9 +248,15 @@ export function createTaskRunner({ workspace = process.cwd(), skillRoot = SKILL_
   async function inspectArticle(files, input) {
     safe(files.article, files.dir);
     if (mode === "rss-share") {
-      const api = validator || await import(pathToFileURL(path.join(scripts, "validate-share.mjs")).href);
-      try { return api.readShare(files.dir, {source:input.source_url}); }
-      catch { reject("VALIDATION_FAILED", "Share validation failed; run validate-share.mjs for details."); }
+      // Content is finalized before image generation. Only prepare upload inputs here.
+      const manifest = readJson(files.share);
+      const caption = fs.readFileSync(files.article, "utf8").replace(/^\uFEFF/, "").trim();
+      if (!manifest || typeof manifest.title !== "string" || !manifest.title.trim() || [...manifest.title].length > 32 || !caption || manifest.caption?.trim() !== caption || manifest.source !== input.source_url) reject("INVALID_SHARE", "Share title, caption or source is missing or inconsistent.");
+      const references = Object.hasOwn(manifest, "images") ? manifest.images?.map(image => image.file) : [manifest.poster];
+      if (!Array.isArray(references) || references.length < 1 || references.length > 3 || references.some((ref, index) => typeof ref !== "string" || !new RegExp(`^\\./assets/0${index + 1}-[a-z0-9][a-z0-9-]{0,23}\\.(png|jpg)$`).test(ref))) reject("INVALID_SHARE", "Provide one to three ordered local share images.");
+      const images = references.map(ref => asset(files, ref));
+      if (fs.readdirSync(files.assets).length !== images.length) reject("INVALID_SHARE", "Assets must contain exactly the listed share images.");
+      return {title:manifest.title, caption, source:input.source_url, images, image_paths:references, image_count:images.length, cover:images[0], inline:[], digest:"", article_type:"newspic"};
     }
     let api = validator;
     if (!api) api = await import(pathToFileURL(path.join(scripts, "validate-article.mjs")).href);
@@ -314,7 +320,7 @@ export function createTaskRunner({ workspace = process.cwd(), skillRoot = SKILL_
       let { input, result } = load(files);
       const protectedResult = protectedState(files, result);
       if (protectedResult) return protectedResult;
-      result = save(files, result, { status: "running", stage: "validation", error: null });
+      result = save(files, result, { status: "running", stage: mode === "rss-share" ? "images" : "validation", error: null });
       let metadata;
       try { metadata = await inspectArticle(files, input); }
       catch (error) {

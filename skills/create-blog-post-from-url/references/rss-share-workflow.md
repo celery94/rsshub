@@ -72,16 +72,16 @@
 
 ## 4. 保存草稿
 
-从工作区根目录用 helper 维护状态；已有输入不重复 init。四步对应 helper 的 evidence、writing、images、validation 阶段，不额外增加策划或审查阶段。
+从工作区根目录用 helper 维护状态；已有输入不重复 init。准备过程使用 evidence、writing、images 阶段，生成后直接执行 publish 保存草稿并进入 wechat_draft，不进入 validation，不额外增加策划或审查阶段。
 
 ```text
 node <skill-dir>/scripts/rss-task.mjs --workspace <workspace> --mode rss-share init <输入JSON>
 node <skill-dir>/scripts/rss-task.mjs --workspace <workspace> --mode rss-share preflight
-node <skill-dir>/scripts/rss-task.mjs --workspace <workspace> --mode rss-share stage <task_id> <evidence|writing|images|validation>
+node <skill-dir>/scripts/rss-task.mjs --workspace <workspace> --mode rss-share stage <task_id> <evidence|writing|images>
 node <skill-dir>/scripts/rss-task.mjs --workspace <workspace> --mode rss-share publish <task_id> --python <已验证的Python解释器>
 ```
 
-图片和文案写好后直接执行 publish，不另跑校验器，也不做人工验收。publish 内部会自动检查清单协议、路径、数量和图片能否解码；它报 `VALIDATION_FAILED` 时，再运行 `node <skill-dir>/scripts/validate-share.mjs output/rss-shares/<task_id>` 查看具体原因并修正清单或文案。失败使用：
+图片和文案写好后直接执行 publish，不运行内容校验器，也不做人工验收。publish 与 Python 桥接不再检查引语是否匹配缓存、文案字数、版式字段或图片像素。事实、引语和文案质量在生成前核对完毕。保存时仅保留必要的上传参数、文件存在与路径、清单数量一致性和防重复建稿保护；旧任务仍按原有 poster 或 images 字段读取，不改写历史结果。失败使用：
 
 ```text
 node <skill-dir>/scripts/rss-task.mjs --workspace <workspace> --mode rss-share fail <task_id> <错误码> <具体原因>

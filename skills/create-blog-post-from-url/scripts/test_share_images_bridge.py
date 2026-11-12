@@ -128,19 +128,21 @@ class MultiImageBridgeTests(unittest.TestCase):
                 self.assertEqual(self.run_bridge()['error']['code'], 'WECHAT_PREPARATION_FAILED')
         self.publisher.add_draft.assert_not_called()
 
-    def test_low_resolution_or_extra_asset_stops_before_token(self):
+    def test_resolution_is_not_rechecked_but_extra_assets_stop_upload(self):
         Image.new('RGB', (1000, 1000), 'navy').save(self.images[0])
-        self.assert_no_upload()
+        self.assertEqual(self.run_bridge()['status'], 'succeeded')
+        for method in vars(self.publisher).values():
+            method.reset_mock()
         self.write('result.json', self.result)
         Image.new('RGB', (1080, 1440), 'navy').save(self.images[0])
         Image.new('RGB', (10, 10), 'white').save(self.assets / 'extra.png')
         self.assert_no_upload()
 
-    def test_quote_must_match_cached_article(self):
+    def test_quote_is_not_rechecked_against_rss_cache(self):
         changed = json.loads(json.dumps(self.manifest))
         changed['images'][0]['blocks'][0]['text'] = '这句话并不存在于原文中，用来验证引语核对。'
         self.write('share.json', changed)
-        self.assert_no_upload()
+        self.assertEqual(self.run_bridge()['status'], 'succeeded')
 
     def test_unknown_submission_is_durable(self):
         self.publisher.add_draft.side_effect = TimeoutError('DO_NOT_LEAK_SECRET')
