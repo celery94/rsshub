@@ -24,7 +24,7 @@ Use `npm ci --ignore-scripts`, `npm run check`, `npm test`, `npm run test:python
 ## Workspace files
 
 - `index.js`, `client.js`, `lib/`: Host, Client, and runtime modules.
-- `skills/create-blog-post-from-url/`: URL/RSS article and share-poster workflows, task helpers, validators, and tests.
+- `skills/create-wechat-content/`: URL/RSS article and share-poster workflows, task helpers, validators, and tests.
 - `skills/azure-image-gen/`: Azure image generation and editing helper and tests.
 - `skills/wechat-draft/`: WeChat draft publishing, styles, and tests.
 - `examples/`: portable configuration and empty OPML examples. Personal OPML and its human-readable category catalogue live together outside this repository.
@@ -39,7 +39,7 @@ Use `npm ci --ignore-scripts`, `npm run check`, `npm test`, `npm run test:python
 ## Content and draft workflows
 
 - Read the relevant local `SKILL.md` before using or changing its workflow; load only references required for the current task.
-- For RSS articles use `references/rss-article-workflow.md`; for share posters use `references/rss-share-workflow.md`, both under `create-blog-post-from-url/`.
+- For RSS articles use `references/rss-article-workflow.md`; for share posters use `references/rss-share-workflow.md`, both under `create-wechat-content/`.
 - RSS article/share workflows only save WeChat drafts; they do not submit publication requests. The `rss-task.mjs publish` command name remains for compatibility and only saves a draft. A new task is `succeeded` only after WeChat returns an actual nonempty `media_id`; this means the draft was saved.
 - Keep RSS tasks in their prescribed `output/` task directories. Preserve task identifiers, state, saved draft results, and historical publication fields when resuming. Historical `publish_id`, `publish_status`, and other `publish*` fields are read-only history: do not migrate, clear, supplement, or reinterpret them as a new result.
 - Reuse existing successful results. An existing `media_id`, `needs_attention`, an unknown result, or a previous `running / wechat_draft` prevents automatic draft recreation. Check existing task results and the WeChat backend before manual recovery; do not change task IDs to bypass this protection.
@@ -64,10 +64,10 @@ Run commands from the repository root. Select the affected test file or suite:
 
 ```powershell
 # Node.js built-in unit tests for article/task/share helpers
-node --test skills/create-blog-post-from-url/scripts/test-*.mjs
+node --test skills/create-wechat-content/scripts/test-*.mjs
 
 # Python unit tests, with each scripts directory available for sibling imports
-python -m unittest discover -s skills/create-blog-post-from-url/scripts -p 'test_*.py'
+python -m unittest discover -s skills/create-wechat-content/scripts -p 'test_*.py'
 python -m unittest discover -s skills/azure-image-gen/scripts -p 'test_*.py'
 python -m unittest discover -s skills/wechat-draft/scripts -p 'test_*.py'
 

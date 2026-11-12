@@ -18,7 +18,7 @@ function fixture(t) {
   const workspace = path.join(root, 'article workspace');
   const cwd = path.join(root, 'unrelated cwd');
   fs.mkdirSync(workspace); fs.mkdirSync(cwd);
-  const skillRoot = path.join(packaged, 'create-blog-post-from-url');
+  const skillRoot = path.join(packaged, 'create-wechat-content');
   const helper = path.join(skillRoot, 'scripts/rss-task.mjs');
   const input = {version:1, mode:'rss-article', task_id:'portable-1', source_url:'https://source.example/article'};
   fs.writeFileSync(path.join(workspace, 'request.json'), JSON.stringify(input));

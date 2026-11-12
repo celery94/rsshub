@@ -41,7 +41,7 @@ def load(name, file):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
-bridge = load("portable_bridge", installed / "create-blog-post-from-url/scripts/publish-rss-draft.py")
+bridge = load("portable_bridge", installed / "create-wechat-content/scripts/publish-rss-draft.py")
 publisher = bridge.load_publisher()
 assert "WECHAT_APP_ID" not in os.environ, "Import must not load unrelated credentials"
 publisher.load_env_from_dotenv(workspace)

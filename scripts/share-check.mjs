@@ -6,7 +6,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createPublicationManager } from '../lib/publication.js';
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'rss-share-manager-'));
-const source = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../skills/create-blog-post-from-url');
+const source = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../skills/create-wechat-content');
 const originalFetch = globalThis.fetch;
 globalThis.fetch = () => { throw new Error('Unexpected network request'); };
 let sequence = 0, checks = 0;
@@ -14,7 +14,7 @@ const fixtures = [];
 function fixture(options = {}) {
   const workspace = path.join(root, String(sequence++), 'workspace');
   const dataDir = path.join(workspace, 'state');
-  const skill = path.join(root, `installed-${sequence}`, 'skills/create-blog-post-from-url');
+  const skill = path.join(root, `installed-${sequence}`, 'skills/create-wechat-content');
   fs.mkdirSync(workspace, { recursive: true });
   fs.mkdirSync(path.join(skill, 'scripts'), { recursive: true });
   fs.mkdirSync(path.join(skill, 'references'), { recursive: true });

@@ -1,5 +1,5 @@
 ---
-name: create-blog-post-from-url
+name: create-wechat-content
 description: 将 RSS 或公开链接整理为微信公众号内容。分享模式：获取原文、整理核对、生成1–3张HD-2D分享图与短文案、保存newspic图片消息草稿。文章模式：改写中文长文、配图、保存news图文草稿。只保存草稿，不提交发布。
 ---
 

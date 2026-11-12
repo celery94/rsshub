@@ -30,7 +30,7 @@
 - warnings：空
 - 安装链接：当前 `rsshub` 仓库
 
-实时状态工具读取的新 OPML 来自数据目录的 `subscriptions/folo.opml`。技能工具加载 `create-blog-post-from-url` 时报告资源根为当前仓库的 `skills/create-blog-post-from-url`。
+实时状态工具读取的新 OPML 来自数据目录的 `subscriptions/folo.opml`。技能工具加载 `create-blog-post-from-url` 时报告资源根为当前仓库的 `skills/create-blog-post-from-url`。（此处保留重命名前的验证记录；当前技能名称为 `create-wechat-content`，目录为 `skills/create-wechat-content`。）
 
 ## 数据保留
 

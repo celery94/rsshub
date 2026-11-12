@@ -24,7 +24,7 @@ try {
   assert.equal(status.feeds.enabled, 0);
   assert.ok(existsSync(status.opmlPath));
   assert.ok(routes.has('/plugin/rss-brief/latest'));
-  for (const name of ['create-blog-post-from-url', 'azure-image-gen', 'wechat-draft']) {
+  for (const name of ['create-wechat-content', 'azure-image-gen', 'wechat-draft']) {
     const skill = skills.get(name);
     assert.ok(skill, `Missing bundled skill: ${name}`);
     assert.ok(resolve(skill.resourceBase.path).startsWith(packageRoot));
@@ -32,7 +32,7 @@ try {
   }
   const added = await tools.get('rss_brief_subscriptions').execute({ action: 'list' });
   assert.equal(added.ok, true);
-  const { createTaskRunner } = await import(pathToFileURL(join(packageRoot, 'skills/create-blog-post-from-url/scripts/rss-task.mjs')));
+  const { createTaskRunner } = await import(pathToFileURL(join(packageRoot, 'skills/create-wechat-content/scripts/rss-task.mjs')));
   let bridgeCalls = 0;
   for (const mode of ['rss-article', 'rss-share']) {
     const id = `packed-${mode}`;
@@ -42,7 +42,7 @@ try {
     const initialized = await runner.init(input);
     assert.equal(initialized.task_id, id);
     const checked = await runner.publish(id, process.execPath);
-    assert.equal(checked.error.code, 'VALIDATION_FAILED');
+    assert.equal(checked.error.code, mode === 'rss-share' ? 'INVALID_STATE' : 'VALIDATION_FAILED');
     assert.equal(checked.media_id, null);
   }
   assert.equal(bridgeCalls, 0);

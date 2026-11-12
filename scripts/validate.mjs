@@ -17,7 +17,7 @@ function files(directory) {
   });
 }
 if (mode === '--python') {
-  for (const skill of ['create-blog-post-from-url', 'azure-image-gen', 'wechat-draft']) {
+  for (const skill of ['create-wechat-content', 'azure-image-gen', 'wechat-draft']) {
     run(process.env.PYTHON ?? 'python', ['-m', 'unittest', 'discover', '-s', `skills/${skill}/scripts`, '-p', 'test_*.py']);
   }
 } else if (mode === '--test') {

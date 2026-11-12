@@ -12,14 +12,14 @@ import { createTaskQueue } from "../lib/queue.js";
 const previousFetch = globalThis.fetch;
 globalThis.fetch = () => { throw new Error("NETWORK_FORBIDDEN_IN_OFFLINE_TEST"); };
 const pluginRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const source = path.join(pluginRoot, "skills/create-blog-post-from-url");
+const source = path.join(pluginRoot, "skills/create-wechat-content");
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "rss-publication-check-"));
 let count = 0;
 const fixtures = [];
 function fixture(options = {}) {
   const workspace = path.join(root, `case-${fixtures.length}`, "workspace");
   const dataDir = path.join(root, `case-${fixtures.length}`, "data");
-  const skill = path.join(root, `case-${fixtures.length}`, "installed-skills/create-blog-post-from-url");
+  const skill = path.join(root, `case-${fixtures.length}`, "installed-skills/create-wechat-content");
   fs.mkdirSync(workspace, { recursive: true });
   fs.mkdirSync(path.join(skill, "scripts"), { recursive: true });
   fs.mkdirSync(path.join(skill, "references"), { recursive: true });

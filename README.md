@@ -29,7 +29,7 @@ Python 依赖由用户显式安装到选定环境，例如 `python -m pip instal
 
 默认安装会创建数据目录下的 `subscriptions.opml` 和 `workspace/`，随后可在阅读页管理订阅；若旧数据库已有启用源且默认 OPML 缺失，会先从数据库导出这些源，避免初始化为空订阅。非秘密本机配置保存到 `<dataDir>/config.json`，示例见 [配置样例](examples/config.json)。配置优先级为默认值 < 本机配置 < 显式 Cordis 行配置；文件内不能重定向 `dataDir`。配置文件的修改在下一次插件加载时生效。
 
-`articleWorkspace` 中的环境配置供创作脚本读取，绝不随包分发。产物写入该工作区的 `output/`。插件随包注册 `create-blog-post-from-url`、`azure-image-gen` 和 `wechat-draft` 三个技能；脚本、模板和样式均从安装包定位。
+`articleWorkspace` 中的环境配置供创作脚本读取，绝不随包分发。产物写入该工作区的 `output/`。插件随包注册 `create-wechat-content`、`azure-image-gen` 和 `wechat-draft` 三个技能；脚本、模板和样式均从安装包定位。
 
 ## 订阅管理与 OPML 导入
 
@@ -129,7 +129,7 @@ OPML → feeds 表
 - 原图保留在任务目录，`assets/` 只放清单内的 1–3 张最终 PNG/JPG；保存草稿时自动检查标题／文案、来源、路径、真实图片格式、分辨率及图片数。服务端与客户端接受 1–3 张结果，第一张为封面。
 - 分享任务使用独立任务 ID、数据目录 `shares/` 和工作区 `output/rss-shares/{task_id}/`，与原有长篇图文任务互不覆盖。同类任务重复点击、刷新和重载复用；结果未知时暂停自动重试。
 - 点击仅授权本次图片消息草稿创建，不提交发布；实际非空 `media_id` 与任务 `status=succeeded` 表示草稿已保存。历史 `publishId` / `publishStatus` 继续只读展示，`needs_attention` 保持待核对，不因已有草稿改成成功，不修改、迁移或补发历史结果。
-- 技能参考 `references/rss-share-workflow.md` 及辅助脚本随插件包提供。详细执行协议、图像排版和草稿校验见随包 `create-blog-post-from-url` 分享参考。不自动提交或推送 Git。
+- 技能参考 `references/rss-share-workflow.md` 及辅助脚本随插件包提供。详细执行协议、图像排版和草稿校验见随包 `create-wechat-content` 分享参考。不自动提交或推送 Git。
 
 ## 接口与代理工具
 
