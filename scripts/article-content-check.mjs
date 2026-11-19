@@ -225,6 +225,23 @@ try {
     assert.equal(count("/never/truncated"), 0);
   });
 
+  await check("previously truncated version 3 cache is refreshed without refetching complete version 3 entries", async () => {
+    const completeId = put("/ok/v3-complete");
+    const truncatedId = put("/ok/v3-truncated");
+    for (const id of [completeId, truncatedId]) {
+      const document = buildContentDocument("<p>Previously cached body</p>");
+      document.truncated = id === truncatedId;
+      setContentSuccess(db, id, { status: "ok", text: "Previously cached body", document, source: "web", version: 3, at: stamp });
+    }
+    assert.equal(content.readCached(row(completeId)).needsExtraction, false);
+    assert.equal(content.readCached(row(truncatedId)).needsExtraction, true);
+    const refreshed = await content.extract(row(truncatedId));
+    assert.equal(refreshed.truncated, false);
+    assert.equal(refreshed.needsExtraction, false);
+    assert.equal(count("/ok/v3-truncated"), 1);
+    assert.equal(count("/ok/v3-complete"), 0);
+  });
+
   await check("web extraction stores sanitized structured content and resolves relative body URLs", async () => {
     const id = put("/ok/article");
     const result = await content.extract(row(id));

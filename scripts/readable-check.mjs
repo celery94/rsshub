@@ -49,14 +49,14 @@ const richPage = `<!doctype html><html lang="en"><head><title>Research notes | E
 const base = { url: "https://example.test/news/2026/post" };
 
 check("extractor version and existing HTML MIME recognition", () => {
-  assert.equal(EXTRACTOR_VERSION, 3);
+  assert.equal(EXTRACTOR_VERSION, 4);
   for (const type of ["text/html; charset=utf-8", "application/xhtml+xml", "application/xml", "text/xml"]) assert.equal(isHtmlContentType(type), true);
   assert.equal(isHtmlContentType("application/pdf"), false);
 });
 
 check("Readability preserves rich article structure and resolves final-URL assets", () => {
   const result = extractReadable(richPage, base);
-  assert.equal(result.extractorVersion, 3);
+  assert.equal(result.extractorVersion, EXTRACTOR_VERSION);
   assert.equal(result.document.version, 1);
   assert.equal(result.quality.usable, true);
   assert.ok(result.title.includes("Research notes"));
@@ -235,11 +235,26 @@ check("technical articles may discuss login and CAPTCHA without being rejected",
   }
 });
 
+check("generated paragraph separators do not truncate a complete article", () => {
+  const paragraph = "Useful scientific observations with detailed evidence. ".repeat(11).trimEnd();
+  const body = `<p>${paragraph}</p>`.repeat(98) + `<p>${"a".repeat(59950 - paragraph.length * 98)} Final observation.</p>`;
+  const result = extractReadable(`<article>${body}</article>`, base);
+  assert.ok(result.quality.usable);
+  assert.equal(result.truncated, false);
+  assert.equal(result.document.truncated, false);
+  assert.ok(result.text.length > 60000);
+  assert.ok(result.text.endsWith("Final observation."));
+  const feed = buildContentDocument(body, base);
+  assert.equal(feed.truncated, false);
+  assert.equal(contentDocumentText(feed), result.text);
+  assertBounded(result.document);
+});
+
 check("text cap truncates both extraction and feed documents with an explicit flag", () => {
   const html = `<article><h1>Long article</h1><p>${"Useful scientific observations with detailed evidence. ".repeat(1800)}</p></article>`;
   const result = extractReadable(html, base);
   assert.equal(result.quality.usable, true);
-  assert.ok(result.text.length <= 60000);
+  assert.equal(result.text, contentDocumentText(result.document));
   assert.equal(result.truncated, true);
   assert.equal(result.document.truncated, true);
   assert.ok(find(result.document, "text").reduce((sum, node) => sum + node.text.length, 0) <= 60000);
